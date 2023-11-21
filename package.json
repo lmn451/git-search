@@ -12,10 +12,12 @@
   "activationEvents": [],
   "main": "./extension.js",
   "contributes": {
-    "commands": [{
-      "command": "git-search.helloWorld",
-      "title": "Hello World"
-    }]
+    "commands": [
+    {
+        "command": "git-search.showPanel",
+        "title": "Show Git Search Panel"
+    }
+]
   },
   "scripts": {
     "lint": "eslint .",
