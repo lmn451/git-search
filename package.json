@@ -1,23 +1,23 @@
 {
-  "name": "git-search",
+  "name": "git-log-s",
   "displayName": "git-search",
   "description": "git log -S in ur IDE",
   "version": "0.0.1",
+  "publisher": "lmn451",
+  "repository": "https://github.com/lmn451/git-search",
   "engines": {
     "vscode": "^1.84.0"
   },
-  "categories": [
-    "Other"
-  ],
+  "categories": ["Other"],
   "activationEvents": [],
   "main": "./extension.js",
   "contributes": {
     "commands": [
-    {
+      {
         "command": "git-search.showPanel",
         "title": "Show Git Search Panel"
-    }
-]
+      }
+    ]
   },
   "scripts": {
     "lint": "eslint .",
