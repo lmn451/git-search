@@ -4,6 +4,7 @@ const { exec } = require('child_process');
 let currentPage = 0;
 const pageSize = 10;
 let latestQuery = '';
+let isLoadMore = false;
 
 function activate(context) {
     let disposable = vscode.commands.registerCommand('git-search.showPanel', () => {
@@ -28,11 +29,13 @@ function activate(context) {
                         break;
                     case 'loadMore':
                         currentPage++;
-                        await executeGitSearch(latestQuery, panel, true);
+                        isLoadMore = true
+                        await executeGitSearch(latestQuery, panel);
                         break;
                     case 'reset':
                         latestQuery = '';
                         currentPage = 0;
+                        isLoadMore = false
                         panel.webview.postMessage({ command: 'showResults', text: '' });
                         break;
                 }
@@ -86,27 +89,30 @@ function getWebviewContent(repoUrl) {
         <button id="loadMoreBtn" style="display:none;">Load More</button>
 
         <script>
-            const vscode = acquireVsCodeApi();
-            document.getElementById('searchBtn').addEventListener('click', () => {
-                const query = document.getElementById('searchQuery').value;
-                vscode.postMessage({ command: 'search', text: query });
-            });
+                const searchButton = document.getElementById("searchBtn");
+                const resetButton = document.getElementById("resetBtn");
+                const getQuery = () => document.getElementById("searchQuery").value;
+                const sendSearch = () =>
+                vscode.postMessage({ command: "search", text: getQuery() });
+                const vscode = acquireVsCodeApi();
+                searchButton.addEventListener("click", sendSearch);
+                resetButton.addEventListener("click", () => {
+                document.getElementById("searchQuery").value = "";
+                vscode.postMessage({ command: "reset" });
+                });
 
-            document.getElementById('resetBtn').addEventListener('click', () => {
-				document.getElementById('searchQuery').value = ''
-                vscode.postMessage({ command: 'reset' });
-            });
 
-            document.getElementById('loadMoreBtn').addEventListener('click', () => {
-                vscode.postMessage({ command: 'loadMore', text: latestQuery });
-            });
+
+                document.getElementById("loadMoreBtn").addEventListener("click", () => {
+                vscode.postMessage({ command: "loadMore", text: latestQuery });
+                });
 
             window.addEventListener('message', event => {
                 const message = event.data;
                 switch (message.command) {
                     case 'showResults':
                         document.getElementById('results').innerHTML = message.text;
-                        document.getElementById('loadMoreBtn').style.display = 'block';
+                        document.getElementById('loadMoreBtn').style.display = message.text ? 'block' : 'none ;
                         break;
                     case 'appendResults':
                         document.getElementById('results').innerHTML += message.text;
@@ -115,10 +121,10 @@ function getWebviewContent(repoUrl) {
             });
         </script>
     </body>
-    </html>`;
+    </html>`
 }
 
-async function executeGitSearch(query, panel, isLoadMore = false) {
+async function executeGitSearch(query, panel) {
     if (!query.trim()) {
         panel.webview.postMessage({ command: 'showResults', text: 'Please enter a valid search query.' });
         return;
