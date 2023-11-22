@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const Convert = require("ansi-to-html");
 const convert = new Convert();
+const sanitize = require("./src/sanitize");
 
 let currentPage = 0;
 const pageSize = 10;
@@ -30,6 +31,7 @@ function activate(context) {
           switch (message.command) {
             case "search":
               latestQuery = message.text;
+              isLoadMore = false;
               currentPage = 0;
               await executeGitSearch(message.text, panel);
               break;
@@ -127,7 +129,7 @@ async function executeGitSearch(query, panel) {
       const [commitHash, author] = commitEntry.split("|");
       const diffCommand = `git diff -U3 --color=always ${commitHash}^! | grep --color=always -1 ${sanitizedQuery}`;
       const diffOutput = await executeCommand(diffCommand, workspaceFolderPath);
-      const diffHtml = convert.toHtml(diffOutput);
+      const diffHtml = convert.toHtml(sanitize(diffOutput));
       content += `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author}<br><pre>${diffHtml}</pre></li>`;
     }
     panel.webview.postMessage({
