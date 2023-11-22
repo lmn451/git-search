@@ -1,5 +1,10 @@
 const vscode = require('vscode');
 const { exec } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const Convert = require('ansi-to-html');
+const convert = new Convert();
+
 
 let currentPage = 0;
 const pageSize = 10;
@@ -67,61 +72,9 @@ function getRepoUrl() {
 }
 
 function getWebviewContent(repoUrl) {
-    return `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <style>
-            body { font-family: Arial, sans-serif; }
-            #searchQuery { width: 80%; padding: 8px; }
-            #searchBtn, #loadMoreBtn, #resetBtn { padding: 8px 15px; margin: 5px; }
-            #results { margin-top: 20px; }
-            .commit { padding: 10px; border-bottom: 1px solid #ccc; }
-            .commit a { text-decoration: none; color: blue; }
-        </style>
-        <title>Git Search</title>
-    </head>
-    <body>
-        <input type="text" id="searchQuery" placeholder="Enter search query">
-        <button id="searchBtn">Search</button>
-        <button id="resetBtn">Reset</button>
-        <div id="results"></div>
-        <button id="loadMoreBtn" style="display:none;">Load More</button>
-
-        <script>
-                const searchButton = document.getElementById("searchBtn");
-                const resetButton = document.getElementById("resetBtn");
-                const getQuery = () => document.getElementById("searchQuery").value;
-                const sendSearch = () =>
-                vscode.postMessage({ command: "search", text: getQuery() });
-                const vscode = acquireVsCodeApi();
-                searchButton.addEventListener("click", sendSearch);
-                resetButton.addEventListener("click", () => {
-                document.getElementById("searchQuery").value = "";
-                vscode.postMessage({ command: "reset" });
-                });
-
-
-
-                document.getElementById("loadMoreBtn").addEventListener("click", () => {
-                vscode.postMessage({ command: "loadMore", text: latestQuery });
-                });
-
-            window.addEventListener('message', event => {
-                const message = event.data;
-                switch (message.command) {
-                    case 'showResults':
-                        document.getElementById('results').innerHTML = message.text;
-                        document.getElementById('loadMoreBtn').style.display = message.text ? 'block' : 'none ;
-                        break;
-                    case 'appendResults':
-                        document.getElementById('results').innerHTML += message.text;
-                        break;
-                }
-            });
-        </script>
-    </body>
-    </html>`
+    const htmlFilePath = path.join(__dirname, 'gitSearchPanel.html');
+    let htmlContent = fs.readFileSync(htmlFilePath, 'utf8');
+    return htmlContent;
 }
 
 async function executeGitSearch(query, panel) {
@@ -140,13 +93,20 @@ async function executeGitSearch(query, panel) {
 
     try {
         const repoUrl = await getRepoUrl();
-        const command = `git log -S"${sanitizedQuery}" --skip=${currentPage * pageSize} -n ${pageSize} --pretty=format:"<li class='commit'><a href='${repoUrl}/commit/%H'>%h</a> - %s (%cd)</li>" --date=format:"%Y-%m-%d %H:%M"`;
-        const stdout = await executeCommand(command, workspaceFolderPath);
-        let content = stdout ? `<ul>${stdout}</ul>` : '<p>No results found.</p>';
-        if (!isLoadMore) {
-            content += '<button id="loadMoreBtn" style="display:none;">Load More</button>';
-        }
-        panel.webview.postMessage({ command: isLoadMore ? 'appendResults' : 'showResults', text: content });
+        const logCommand = `git log --pretty=format:"%h|%an" -S"${sanitizedQuery}"`;
+        const logOutput = await executeCommand(logCommand, workspaceFolderPath);
+        const commits = logOutput.split('\n');
+
+        let content = '';
+       for (const commitEntry of commits) {
+        if(commitEntry.trim() === '') continue;
+        const [commitHash, author] = commitEntry.split('|');
+        const diffCommand = `git diff -U3 --color=always ${commitHash}^! | grep --color=always -1 ${sanitizedQuery}`;
+        const diffOutput = await executeCommand(diffCommand, workspaceFolderPath);
+        const diffHtml = convert.toHtml(diffOutput);
+        content += `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author}<br><pre>${diffHtml}</pre></li>`;
+    }
+        panel.webview.postMessage({ command: isLoadMore ? 'appendResults' : 'showResults', text: content, latestQuery });
     } catch (error) {
         panel.webview.postMessage({ command: 'showResults', text: `Error: ${error.message}` });
     }

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        #searchQuery {
+            width: 80%;
+            padding: 8px;
+            margin: 8px;
+        }
+
+        #searchBtn,
+        #loadMoreBtn,
+        #resetBtn {
+            padding: 8px 15px;
+            margin: 5px;
+        }
+
+        #results {
+            margin-top: 20px;
+        }
+
+        .commit {
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .commit a {
+            text-decoration: none;
+            color: blue;
+        }
+        .commit-diff {
+            margin: 20px auto
+        }
+    </style>
+    <title>Git Search</title>
+</head>
+
+<body>
+    <input autofocus type="text" id="searchQuery" placeholder="Enter search query">
+    <button id="searchBtn">Search</button>
+    <button id="resetBtn">Reset</button>
+    <div id="results"></div>
+    <button id="loadMoreBtn" style="display:none;">Load More</button>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+        document.getElementById('searchBtn').addEventListener('click', () => {
+            const query = document.getElementById('searchQuery').value;
+            vscode.postMessage({ command: 'search', text: query });
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            document.getElementById('searchQuery').value = ''
+            vscode.postMessage({ command: 'reset' });
+        });
+
+        document.getElementById('loadMoreBtn').addEventListener('click', () => {
+            vscode.postMessage({ command: 'loadMore', text: "" });
+        });
+
+        window.addEventListener('message', event => {
+            const message = event.data;
+            switch (message.command) {
+                case 'showResults':
+                    document.getElementById('results').innerHTML = message.text;
+                    document.getElementById('loadMoreBtn').style.display = message.text ? 'block' : "none";
+                    break;
+                case 'appendResults':
+                    document.getElementById('loadMoreBtn').style.display = message.text ? 'block' : "none";
+                    document.getElementById('results').innerHTML += message.text;
+                    break;
+            }
+        });
+    </script>
+</body>
+
+</html>
