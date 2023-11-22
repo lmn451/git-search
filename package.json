@@ -5,7 +5,10 @@
   "icon": "./assets/logo.png",
   "version": "0.0.7",
   "publisher": "lmn451",
-  "repository": "https://github.com/lmn451/git-search",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lmn451/git-search"
+  },
   "engines": {
     "vscode": "^1.84.0"
   },

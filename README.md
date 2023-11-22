@@ -2,7 +2,7 @@ Git Search for VS Code 🚀
 
 👉 TL;DR: Find out who changed what and when in your codebase. Just make sure you're not the culprit you're looking for! 😉
 
-![Example](https://s5.gifyu.com/images/SRQ3d.md.gif)
+![Example](./assets/out.gif)
 
 What's This?
 
