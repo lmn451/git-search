@@ -93,7 +93,7 @@ async function executeGitSearch(query, panel) {
 
     try {
         const repoUrl = await getRepoUrl();
-        const logCommand = `git log --pretty=format:"%h|%an" -S"${sanitizedQuery}"`;
+        const logCommand = `git log --pretty=format:"%h|%an" -S"${sanitizedQuery}" --skip=${currentPage * pageSize} -n ${pageSize}`;
         const logOutput = await executeCommand(logCommand, workspaceFolderPath);
         const commits = logOutput.split('\n');
 
