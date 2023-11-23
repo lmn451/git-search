@@ -127,7 +127,7 @@ async function executeGitSearch(query, panel) {
     for (const commitEntry of commits) {
       if (commitEntry.trim() === "") continue;
       const [commitHash, author] = commitEntry.split("|");
-      const diffCommand = `git diff -U3 --color=always ${commitHash}^! | grep --color=always -1 ${sanitizedQuery}`;
+      const diffCommand = `git diff -U3 --color=always -- '${commitHash}^!' | grep --color=always -1 ${sanitizedQuery}`;
       const diffOutput = await executeCommand(diffCommand, workspaceFolderPath);
       const diffHtml = convert.toHtml(sanitize(diffOutput));
       content += `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author}<br><pre>${diffHtml}</pre></li>`;
