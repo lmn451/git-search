@@ -3,7 +3,7 @@ const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const Convert = require("ansi-to-html");
-const convert = new Convert();
+const convert = new Convert({ escapeXML: true });
 const sanitize = require("./src/sanitize");
 
 let currentPage = 0;
@@ -36,7 +36,7 @@ function activate(context) {
               await executeGitSearch(message.text, panel);
               break;
             case "loadMore":
-              currentPage++;
+              currentPage = currentPage + 1;
               isLoadMore = true;
               await executeGitSearch(latestQuery, panel);
               break;
@@ -70,7 +70,7 @@ function getRepoUrl() {
         { cwd: workspaceFolderPath },
         (error, stdout, stderr) => {
           if (error || stderr || !stdout) {
-            resolve(""); // Fallback if Git repo URL can't be determined
+            resolve("");
           } else {
             const repoUrl = stdout
               .trim()
@@ -123,7 +123,7 @@ async function executeGitSearch(query, panel) {
     const logOutput = await executeCommand(logCommand, workspaceFolderPath);
     const commits = logOutput.split("\n");
 
-    let content = "";
+    let content = "<ul>";
     for (const commitEntry of commits) {
       if (commitEntry.trim() === "") continue;
       const [commitHash, author] = commitEntry.split("|");
@@ -132,6 +132,7 @@ async function executeGitSearch(query, panel) {
       const diffHtml = convert.toHtml(sanitize(diffOutput));
       content += `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author}<br><pre>${diffHtml}</pre></li>`;
     }
+    content += "</ul>";
     panel.webview.postMessage({
       command: isLoadMore ? "appendResults" : "showResults",
       text: content,
