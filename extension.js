@@ -3,7 +3,7 @@ const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const Convert = require("ansi-to-html");
-const convert = new Convert({ escapeXML: true });
+const convert = new Convert();
 const sanitize = require("./src/sanitize");
 const { adjustDate } = require("./src/helpers");
 
@@ -136,7 +136,7 @@ async function executeGitSearch(query, panel) {
     for (const commitEntry of commits) {
       if (commitEntry.trim() === "") continue;
       const [commitHash, author, commitDate] = commitEntry.split("|");
-      const diffCommand = `git diff -U3 --color=always ${commitHash}^! | grep --color=always -1 ${query}`;
+      const diffCommand = `git diff -U3 --color=always ${commitHash}^! | grep --color=always -1 "${query}"`;
       const diffOutput = await executeCommand(diffCommand, workspaceFolderPath);
       const diffHtml = convert.toHtml(sanitize(diffOutput));
       content += `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author}<br><pre>${diffHtml}</pre></li>`;
