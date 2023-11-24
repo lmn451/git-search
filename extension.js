@@ -5,11 +5,12 @@ const path = require("path");
 const Convert = require("ansi-to-html");
 const convert = new Convert({ escapeXML: true });
 const sanitize = require("./src/sanitize");
+const { adjustDate } = require("./src/helpers");
 
-let currentPage = 0;
 const pageSize = 10;
 let latestQuery = "";
 let isLoadMore = false;
+let lastCommitDate = "";
 
 function activate(context) {
   let disposable = vscode.commands.registerCommand(
@@ -32,19 +33,18 @@ function activate(context) {
             case "search":
               latestQuery = message.text;
               isLoadMore = false;
-              currentPage = 0;
+              lastCommitDate = "";
               await executeGitSearch(message.text, panel);
               break;
             case "loadMore":
-              currentPage = currentPage + 1;
               isLoadMore = true;
               await executeGitSearch(latestQuery, panel);
               break;
             case "reset":
               latestQuery = "";
-              currentPage = 0;
               isLoadMore = false;
-              panel.webview.postMessage({ command: "showResults", text: "" });
+              lastCommitDate = "";
+              panel.webview.postMessage({ command: "reset", text: "" });
               break;
           }
         },
@@ -94,22 +94,20 @@ function getWebviewContent(repoUrl) {
 
 async function executeGitSearch(query, panel) {
   if (!query.trim()) {
-    panel.webview.postMessage({
+    return panel.webview.postMessage({
       command: "showResults",
       text: "Please enter a valid search query.",
     });
-    return;
   }
 
   if (
     !vscode.workspace.workspaceFolders ||
     vscode.workspace.workspaceFolders.length === 0
   ) {
-    panel.webview.postMessage({
+    return panel.webview.postMessage({
       command: "showResults",
       text: "No open workspace with a Git repository detected.",
     });
-    return;
   }
 
   const workspaceFolderPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
@@ -117,17 +115,27 @@ async function executeGitSearch(query, panel) {
 
   try {
     const repoUrl = await getRepoUrl();
-    const logCommand = `git log --pretty=format:"%h|%an" -S"${sanitizedQuery}" --skip=${
-      currentPage * pageSize
+    const logCommand = `git log --pretty=format:"%h|%an|%cd" -S"${sanitizedQuery}" ${
+      lastCommitDate ? `--before="${lastCommitDate}"` : ""
     } -n ${pageSize}`;
     const logOutput = await executeCommand(logCommand, workspaceFolderPath);
+    if (!logOutput) {
+      panel.webview.postMessage({
+        command: isLoadMore ? "appendResults" : "showResults",
+        text: "",
+        latestQuery,
+      });
+      isLoadMore = false;
+      return;
+    }
     const commits = logOutput.split("\n");
+
+    lastCommitDate = adjustDate(commits.at(-1).split("|")[2]);
 
     let content = "<ul>";
     for (const commitEntry of commits) {
       if (commitEntry.trim() === "") continue;
-      const [commitHash, author] = commitEntry.split("|");
-
+      const [commitHash, author, commitDate] = commitEntry.split("|");
       const diffCommand = `git diff -U3 --color=always ${commitHash}^! | grep --color=always -1 ${sanitizedQuery}`;
       const diffOutput = await executeCommand(diffCommand, workspaceFolderPath);
       const diffHtml = convert.toHtml(sanitize(diffOutput));
@@ -142,7 +150,7 @@ async function executeGitSearch(query, panel) {
   } catch (error) {
     panel.webview.postMessage({
       command: "showResults",
-      text: `Error: ${error.message}`,
+      text: `Error: ${error}`,
     });
   }
 }

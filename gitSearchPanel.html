@@ -82,7 +82,13 @@
             document.getElementById("loadMoreBtn").style.display = message.text
               ? "block"
               : "none";
-            document.getElementById("results").innerHTML += message.text;
+            document.getElementById("results").innerHTML +=
+              message.text || "Nothing More";
+            break;
+
+          case "reset":
+            document.getElementById("results").innerHTML = "";
+            document.getElementById("loadMoreBtn").style.display = "none";
             break;
         }
       });
