@@ -5,10 +5,11 @@
     <style>
       body {
         font-family: Arial, sans-serif;
+        position: relative;
       }
 
       #searchQuery {
-        width: 80%;
+        width: 60%;
         padding: 8px;
         margin: 8px;
       }
@@ -36,23 +37,50 @@
       .commit-diff {
         margin: 20px auto;
       }
+      .find-widget {
+        position: fixed;
+        top: 60px;
+        right: 20px;
+      }
+      .highlight {
+        background-color: yellow;
+      }
+      .current-highlight {
+        background-color: orange;
+      }
+      .search-container {
+        width: 100%;
+        display: flex;
+        position: fixed;
+        top: 0;
+        left: 0;
+      }
     </style>
     <title>Git Search</title>
   </head>
 
   <body>
-    <input
-      autofocus
-      type="text"
-      id="searchQuery"
-      placeholder="Enter search query (regexp friendly)"
-    />
-    <button id="searchBtn">Search</button>
-    <button id="resetBtn">Reset</button>
+    <div class="search-container">
+      <input
+        autofocus
+        type="text"
+        id="searchQuery"
+        placeholder="Enter search query (regexp friendly)"
+      />
+      <button id="searchBtn">Search</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+    <div id="findWidget" class="find-widget">
+      <input type="text" id="findInput" placeholder="Find" />
+      <button id="findPrev">Previous</button>
+      <button id="findNext">Next</button>
+    </div>
+    <script></script>
     <div id="results"></div>
     <button id="loadMoreBtn" style="display: none">Load More</button>
 
     <script>
+      //Search Logic
       const vscode = acquireVsCodeApi();
       document.getElementById("searchBtn").addEventListener("click", () => {
         const query = document.getElementById("searchQuery").value;
@@ -92,6 +120,99 @@
             break;
         }
       });
+      // Find Logic
+      const findInput = document.getElementById("findInput");
+      const findPrevButton = document.getElementById("findPrev");
+      const findNextButton = document.getElementById("findNext");
+      let findMatches = [];
+      let currentFindIndex = -1;
+
+      findInput.addEventListener("input", () =>
+        searchAndHighlight(findInput.value)
+      );
+
+      function searchAndHighlight(query) {
+        resetHighlights();
+        if (!query) return;
+
+        const regex = new RegExp(escapeRegExp(query), "gi");
+        document.querySelectorAll(".commit-diff").forEach((commitElem) => {
+          processNode(commitElem, regex);
+        });
+      }
+
+      function processNode(node, regex) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const text = node.textContent;
+          const parent = node.parentNode;
+          const docFrag = document.createDocumentFragment();
+
+          let startIndex = 0,
+            match;
+          while ((match = regex.exec(text)) !== null) {
+            // Append the text before the match
+            docFrag.appendChild(
+              document.createTextNode(text.substring(startIndex, match.index))
+            );
+
+            // Create and append the highlighted text
+            const highlightSpan = document.createElement("span");
+            highlightSpan.className = "highlight";
+            highlightSpan.textContent = match[0];
+            docFrag.appendChild(highlightSpan);
+
+            startIndex = match.index + match[0].length;
+          }
+          // Append any remaining text after the last match
+          docFrag.appendChild(
+            document.createTextNode(text.substring(startIndex))
+          );
+
+          parent.replaceChild(docFrag, node);
+        } else {
+          Array.from(node.childNodes).forEach((child) =>
+            processNode(child, regex)
+          );
+        }
+      }
+
+      function resetHighlights() {
+        document.querySelectorAll(".highlight").forEach((highlightSpan) => {
+          const textNode = document.createTextNode(highlightSpan.textContent);
+          const parent = highlightSpan.parentNode;
+          parent.replaceChild(textNode, highlightSpan);
+          parent.normalize(); // Normalize merges adjacent text nodes
+        });
+      }
+
+      function escapeRegExp(text) {
+        return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      }
+
+      function navigateFind(direction) {
+        if (findMatches.length === 0) return;
+        findMatches[currentFindIndex]?.classList.remove("current-highlight");
+        let currentFindIndex;
+        if (direction === "next") {
+          currentFindIndex = (currentFindIndex + 1) % findMatches.length;
+        } else if (direction === "prev") {
+          currentFindIndex =
+            (currentFindIndex - 1 + findMatches.length) % findMatches.length;
+        }
+        findMatches[currentFindIndex].classList.add("current-highlight");
+        findMatches[currentFindIndex].scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+
+      function updateFindNavigation() {
+        currentFindIndex = findMatches.length > 0 ? 0 : -1;
+        navigateFind("next");
+      }
+
+      findPrevButton.addEventListener("click", () => navigateFind("prev"));
+      findNextButton.addEventListener("click", () => navigateFind("next"));
     </script>
   </body>
 </html>

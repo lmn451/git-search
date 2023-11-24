@@ -20,13 +20,9 @@ function activate(context) {
         "gitSearch",
         "Git Search",
         vscode.ViewColumn.One,
-        { enableScripts: true }
+        { enableScripts: true, retainContextWhenHidden: true }
       );
-
-      getRepoUrl().then((repoUrl) => {
-        panel.webview.html = getWebviewContent(repoUrl);
-      });
-
+      panel.webview.html = getWebviewContent();
       panel.webview.onDidReceiveMessage(
         async (message) => {
           switch (message.command) {
@@ -53,7 +49,6 @@ function activate(context) {
       );
     }
   );
-
   context.subscriptions.push(disposable);
 }
 
@@ -86,86 +81,44 @@ function getRepoUrl() {
   });
 }
 
-function getWebviewContent(repoUrl) {
+function getWebviewContent() {
   const htmlFilePath = path.join(__dirname, "gitSearchPanel.html");
   let htmlContent = fs.readFileSync(htmlFilePath, "utf8");
   return htmlContent;
 }
 
 async function executeGitSearch(query, panel) {
-  if (!query.trim()) {
-    return panel.webview.postMessage({
-      command: "showResults",
-      text: "Please enter a valid search query.",
-    });
-  }
-
-  if (
-    !vscode.workspace.workspaceFolders ||
-    vscode.workspace.workspaceFolders.length === 0
-  ) {
-    return panel.webview.postMessage({
-      command: "showResults",
-      text: "No open workspace with a Git repository detected.",
-    });
-  }
-
   const workspaceFolderPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
   const sanitizedQuery = query.replace(/[^a-zA-Z0-9 _-]/g, "");
-
-  try {
-    const repoUrl = await getRepoUrl();
-    const logCommand = `git log --pretty=format:"%h|%an|%cd" -G"${query}" ${
-      lastCommitDate ? `--before="${lastCommitDate}"` : ""
-    } -n ${pageSize}`;
-    const logOutput = await executeCommand(logCommand, workspaceFolderPath);
-    if (!logOutput) {
-      panel.webview.postMessage({
-        command: isLoadMore ? "appendResults" : "showResults",
-        text: "",
-        latestQuery,
-      });
-      isLoadMore = false;
-      return;
-    }
-    const commits = logOutput.split("\n");
-
-    lastCommitDate = adjustDate(commits.at(-1).split("|")[2]);
-
-    let content = "<ul>";
-    for (const commitEntry of commits) {
-      if (commitEntry.trim() === "") continue;
-      const [commitHash, author, commitDate] = commitEntry.split("|");
-      const diffCommand = `git diff -U3 --color=always ${commitHash}^! | grep --color=always -1 "${query}"`;
-      const diffOutput = await executeCommand(diffCommand, workspaceFolderPath);
-      const diffHtml = convert.toHtml(sanitize(diffOutput));
-      content += `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author}<br><pre>${diffHtml}</pre></li>`;
-    }
-    content += "</ul>";
-    panel.webview.postMessage({
-      command: isLoadMore ? "appendResults" : "showResults",
-      text: content,
-      latestQuery,
-    });
-  } catch (error) {
-    panel.webview.postMessage({
-      command: "showResults",
-      text: `Error: ${error}`,
-    });
+  const repoUrl = await getRepoUrl();
+  const logCommand = `git log --pretty=format:"%h|%an|%cd" -G"${query}" ${
+    lastCommitDate ? `--before="${lastCommitDate}"` : ""
+  } -n ${pageSize}`;
+  const logOutput = await executeCommand(logCommand, workspaceFolderPath);
+  const commits = logOutput.split("\n");
+  lastCommitDate = adjustDate(commits.at(-1).split("|")[2]);
+  let content = "<ul>";
+  for (const commitEntry of commits) {
+    if (commitEntry.trim() === "") continue;
+    const [commitHash, author, commitDate] = commitEntry.split("|");
+    const diffCommand = `git diff -U3 --color=always ${commitHash}^! | grep --color=always -1 "${query}"`;
+    const diffOutput = await executeCommand(diffCommand, workspaceFolderPath);
+    const diffHtml = convert.toHtml(sanitize(diffOutput));
+    content += `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author}<br><pre>${diffHtml}</pre></li>`;
   }
+  content += "</ul>";
+  panel.webview.postMessage({
+    command: isLoadMore ? "appendResults" : "showResults",
+    text: content,
+    latestQuery,
+  });
 }
 
 function executeCommand(command, cwd) {
   return new Promise((resolve, reject) => {
     exec(command, { cwd }, (error, stdout, stderr) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      if (stderr) {
-        reject(new Error(stderr));
-        return;
-      }
+      if (error) reject(error);
+      if (stderr) reject(new Error(stderr));
       resolve(stdout);
     });
   });
