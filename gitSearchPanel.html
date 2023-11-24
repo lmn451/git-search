@@ -72,6 +72,7 @@
     </div>
     <div id="findWidget" class="find-widget">
       <input type="text" id="findInput" placeholder="Find" />
+      <span id="matchCount"></span>
       <button id="findPrev">Previous</button>
       <button id="findNext">Next</button>
     </div>
@@ -118,6 +119,7 @@
             document.getElementById("results").innerHTML = "";
             document.getElementById("loadMoreBtn").style.display = "none";
             document.getElementById("findInput").value = "";
+            document.getElementById("matchCount").innerHTML = "";
             break;
         }
       });
@@ -139,7 +141,10 @@
         resetHighlights();
         findMatches = [];
         currentFindIndex = -1;
-        if (!query) return;
+        if (!query) {
+          updateMatchCount(0, 0); // Reset counter when query is empty
+          return;
+        }
 
         const regex = new RegExp(escapeRegExp(query), "gi");
         document.querySelectorAll(".commit-diff").forEach((commitElem) => {
@@ -149,6 +154,8 @@
         if (findMatches.length > 0) {
           currentFindIndex = 0;
           navigateFind("next");
+        } else {
+          updateMatchCount(0, 0);
         }
       }
 
@@ -203,6 +210,12 @@
           behavior: "smooth",
           block: "center",
         });
+        updateMatchCount(currentFindIndex + 1, findMatches.length);
+      }
+
+      function updateMatchCount(currentIndex, totalMatches) {
+        matchCount.textContent =
+          totalMatches > 0 ? `${currentIndex} of ${totalMatches}` : "";
       }
 
       function resetHighlights() {
