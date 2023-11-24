@@ -1,9 +1,9 @@
 {
   "name": "git-log-s",
   "displayName": "git-search",
-  "description": "git log -S in your VS Code",
+  "description": "git log -G in your VS Code",
   "icon": "./assets/logo.png",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "publisher": "lmn451",
   "repository": {
     "type": "git",
