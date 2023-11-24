@@ -89,7 +89,6 @@ function getWebviewContent() {
 
 async function executeGitSearch(query, panel) {
   const workspaceFolderPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-  const sanitizedQuery = query.replace(/[^a-zA-Z0-9 _-]/g, "");
   const repoUrl = await getRepoUrl();
   const logCommand = `git log --pretty=format:"%h|%an|%cd" -G"${query}" ${
     lastCommitDate ? `--before="${lastCommitDate}"` : ""
