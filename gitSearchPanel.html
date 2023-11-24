@@ -117,6 +117,7 @@
           case "reset":
             document.getElementById("results").innerHTML = "";
             document.getElementById("loadMoreBtn").style.display = "none";
+            document.getElementById("findInput").value = "";
             break;
         }
       });
@@ -131,14 +132,24 @@
         searchAndHighlight(findInput.value)
       );
 
+      findPrevButton.addEventListener("click", () => navigateFind("prev"));
+      findNextButton.addEventListener("click", () => navigateFind("next"));
+
       function searchAndHighlight(query) {
         resetHighlights();
+        findMatches = [];
+        currentFindIndex = -1;
         if (!query) return;
 
         const regex = new RegExp(escapeRegExp(query), "gi");
         document.querySelectorAll(".commit-diff").forEach((commitElem) => {
           processNode(commitElem, regex);
         });
+
+        if (findMatches.length > 0) {
+          currentFindIndex = 0;
+          navigateFind("next");
+        }
       }
 
       function processNode(node, regex) {
@@ -150,49 +161,37 @@
           let startIndex = 0,
             match;
           while ((match = regex.exec(text)) !== null) {
-            // Append the text before the match
             docFrag.appendChild(
               document.createTextNode(text.substring(startIndex, match.index))
             );
 
-            // Create and append the highlighted text
             const highlightSpan = document.createElement("span");
             highlightSpan.className = "highlight";
             highlightSpan.textContent = match[0];
             docFrag.appendChild(highlightSpan);
+            findMatches.push(highlightSpan);
 
             startIndex = match.index + match[0].length;
           }
-          // Append any remaining text after the last match
           docFrag.appendChild(
             document.createTextNode(text.substring(startIndex))
           );
 
-          parent.replaceChild(docFrag, node);
-        } else {
+          if (startIndex > 0) {
+            parent.replaceChild(docFrag, node);
+          }
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
           Array.from(node.childNodes).forEach((child) =>
             processNode(child, regex)
           );
         }
       }
 
-      function resetHighlights() {
-        document.querySelectorAll(".highlight").forEach((highlightSpan) => {
-          const textNode = document.createTextNode(highlightSpan.textContent);
-          const parent = highlightSpan.parentNode;
-          parent.replaceChild(textNode, highlightSpan);
-          parent.normalize(); // Normalize merges adjacent text nodes
-        });
-      }
-
-      function escapeRegExp(text) {
-        return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      }
-
       function navigateFind(direction) {
         if (findMatches.length === 0) return;
-        findMatches[currentFindIndex]?.classList.remove("current-highlight");
-        let currentFindIndex;
+        if (currentFindIndex !== -1) {
+          findMatches[currentFindIndex].classList.remove("current-highlight");
+        }
         if (direction === "next") {
           currentFindIndex = (currentFindIndex + 1) % findMatches.length;
         } else if (direction === "prev") {
@@ -206,13 +205,20 @@
         });
       }
 
-      function updateFindNavigation() {
-        currentFindIndex = findMatches.length > 0 ? 0 : -1;
-        navigateFind("next");
+      function resetHighlights() {
+        document.querySelectorAll(".highlight").forEach((highlightSpan) => {
+          const textNode = document.createTextNode(highlightSpan.textContent);
+          const parent = highlightSpan.parentNode;
+          parent.replaceChild(textNode, highlightSpan);
+          parent.normalize(); // Normalize merges adjacent text nodes
+        });
+        findMatches = [];
+        currentFindIndex = -1;
       }
 
-      findPrevButton.addEventListener("click", () => navigateFind("prev"));
-      findNextButton.addEventListener("click", () => navigateFind("next"));
+      function escapeRegExp(text) {
+        return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      }
     </script>
   </body>
 </html>
