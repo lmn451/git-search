@@ -5,7 +5,27 @@
     <style>
       body {
         font-family: Arial, sans-serif;
-        position: relative;
+      }
+      :focus {
+        border-color: var(--vscode-focusBorder);
+      }
+
+      input {
+        background-color: var(--vscode-input-background);
+        color: var(--vscode-input-foreground);
+        border-color: var(--vscode-inputOption-activeBorder);
+      }
+
+      input::-webkit-input-placeholder {
+        color: var(--vscode-input-placeholderForeground);
+      }
+
+      button {
+        background-color: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
+      }
+      button:hover {
+        background-color: var(--vscode-button-hoverBackground);
       }
 
       #searchQuery {
@@ -18,11 +38,12 @@
       #loadMoreBtn,
       #resetBtn {
         padding: 8px 16px;
-        margin: 8px;
+        margin: 8px 0;
       }
 
       #results {
-        margin-top: 90px;
+        max-height: calc(100vh - 142px);
+        overflow: auto;
       }
 
       .commit {
@@ -34,14 +55,15 @@
         text-decoration: none;
         color: blue;
       }
-      .commit-diff {
-        margin: 20px auto;
-      }
+
       .find-widget {
-        position: fixed;
-        top: 60px;
-        right: 20px;
+        display: flex;
+        justify-content: flex-end;
+        margin: 8px;
+        gap: 8px;
+        align-items: center;
       }
+
       .highlight {
         background-color: yellow;
       }
@@ -49,33 +71,33 @@
         background-color: orange;
       }
       .search-container {
-        width: 100%;
+        justify-content: flex-start;
         display: flex;
-        position: fixed;
-        top: 0;
-        left: 0;
+        gap: 8px;
       }
     </style>
     <title>Git Search</title>
   </head>
 
-  <body>
-    <div class="search-container">
-      <input
-        autofocus
-        type="text"
-        id="searchQuery"
-        placeholder="Enter search query (regexp friendly)"
-      />
-      <button id="searchBtn">Search</button>
-      <button id="resetBtn">Reset</button>
-    </div>
-    <div id="findWidget" class="find-widget">
-      <input type="text" id="findInput" placeholder="Find" />
-      <span id="matchCount"></span>
-      <button id="findPrev">Previous</button>
-      <button id="findNext">Next</button>
-    </div>
+  <body onload="searchQuery.focus()">
+    <header>
+      <div class="search-container">
+        <input
+          autofocus
+          type="text"
+          id="searchQuery"
+          placeholder="Enter search query (regexp friendly)"
+        />
+        <button id="searchBtn">Search</button>
+        <button id="resetBtn">Reset</button>
+      </div>
+      <div id="findWidget" class="find-widget">
+        <input type="text" id="findInput" placeholder="Find" />
+        <span id="matchCount"></span>
+        <button id="findPrev">Previous</button>
+        <button id="findNext">Next</button>
+      </div>
+    </header>
     <div id="results"></div>
     <button id="loadMoreBtn" style="display: none">Load More</button>
 
