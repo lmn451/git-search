@@ -5,6 +5,9 @@
     <style>
       body {
         font-family: Arial, sans-serif;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        height: 100vh;
       }
       :focus {
         border-color: var(--vscode-focusBorder);
@@ -42,7 +45,6 @@
       }
 
       #results {
-        max-height: calc(100vh - 142px);
         overflow: auto;
       }
 
@@ -99,7 +101,9 @@
       </div>
     </header>
     <div id="results"></div>
-    <button id="loadMoreBtn" style="display: none">Load More</button>
+    <footer>
+      <button id="loadMoreBtn" style="display: none">Load More</button>
+    </footer>
 
     <script>
       //Search Logic
@@ -123,13 +127,12 @@
         switch (message.command) {
           case "showResults":
             results.innerHTML = message.text || "No results found";
-            loadMoreBtn.style.display = message.text ? "block" : "none";
+            loadMoreBtn.style.display = message.isLoadMore ? "block" : "none";
             break;
           case "appendResults":
-            loadMoreBtn.style.display = message.text ? "block" : "none";
             results.innerHTML += message.text || "Nothing More";
+            loadMoreBtn.style.display = message.text ? "block" : "none";
             break;
-
           case "reset":
             results.innerHTML = "";
             loadMoreBtn.style.display = "none";

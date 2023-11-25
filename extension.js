@@ -30,6 +30,10 @@ function activate(context) {
               latestQuery = message.text;
               isLoadMore = false;
               lastCommitDate = "";
+              panel.webview.postMessage({
+                command: "showResults",
+                text: "Loading",
+              });
               await executeGitSearch(message.text, panel);
               break;
             case "loadMore":
@@ -116,6 +120,7 @@ async function executeGitSearch(query, panel) {
     command: isLoadMore ? "appendResults" : "showResults",
     text: content,
     latestQuery,
+    isLoadMore: true,
   });
 }
 
