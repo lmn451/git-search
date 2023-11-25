@@ -88,6 +88,12 @@ function getWebviewContent() {
 }
 
 async function executeGitSearch(query, panel) {
+  if (!query.trim()) {
+    return panel.webview.postMessage({
+      command: "showResults",
+      text: "",
+    });
+  }
   const workspaceFolderPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
   const repoUrl = await getRepoUrl();
   const logCommand = `git log --pretty=format:"%h|%an|%cd" -G"${query}" ${

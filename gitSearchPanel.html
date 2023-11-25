@@ -17,12 +17,12 @@
       #searchBtn,
       #loadMoreBtn,
       #resetBtn {
-        padding: 8px 15px;
-        margin: 5px;
+        padding: 8px 16px;
+        margin: 8px;
       }
 
       #results {
-        margin-top: 20px;
+        margin-top: 90px;
       }
 
       .commit {
@@ -76,24 +76,23 @@
       <button id="findPrev">Previous</button>
       <button id="findNext">Next</button>
     </div>
-    <script></script>
     <div id="results"></div>
     <button id="loadMoreBtn" style="display: none">Load More</button>
 
     <script>
       //Search Logic
       const vscode = acquireVsCodeApi();
-      document.getElementById("searchBtn").addEventListener("click", () => {
-        const query = document.getElementById("searchQuery").value;
+      searchBtn.addEventListener("click", () => {
+        const query = searchQuery.value;
         vscode.postMessage({ command: "search", text: query });
       });
 
-      document.getElementById("resetBtn").addEventListener("click", () => {
-        document.getElementById("searchQuery").value = "";
+      resetBtn.addEventListener("click", () => {
+        searchQuery.value = "";
         vscode.postMessage({ command: "reset" });
       });
 
-      document.getElementById("loadMoreBtn").addEventListener("click", () => {
+      loadMoreBtn.addEventListener("click", () => {
         vscode.postMessage({ command: "loadMore", text: "" });
       });
 
@@ -101,32 +100,23 @@
         const message = event.data;
         switch (message.command) {
           case "showResults":
-            document.getElementById("results").innerHTML =
-              message.text || "No results found";
-            document.getElementById("loadMoreBtn").style.display = message.text
-              ? "block"
-              : "none";
+            results.innerHTML = message.text || "No results found";
+            loadMoreBtn.style.display = message.text ? "block" : "none";
             break;
           case "appendResults":
-            document.getElementById("loadMoreBtn").style.display = message.text
-              ? "block"
-              : "none";
-            document.getElementById("results").innerHTML +=
-              message.text || "Nothing More";
+            loadMoreBtn.style.display = message.text ? "block" : "none";
+            results.innerHTML += message.text || "Nothing More";
             break;
 
           case "reset":
-            document.getElementById("results").innerHTML = "";
-            document.getElementById("loadMoreBtn").style.display = "none";
-            document.getElementById("findInput").value = "";
-            document.getElementById("matchCount").innerHTML = "";
+            results.innerHTML = "";
+            loadMoreBtn.style.display = "none";
+            findInput.value = "";
+            matchCount.innerHTML = "";
             break;
         }
       });
       // Find Logic
-      const findInput = document.getElementById("findInput");
-      const findPrevButton = document.getElementById("findPrev");
-      const findNextButton = document.getElementById("findNext");
       let findMatches = [];
       let currentFindIndex = -1;
 
@@ -134,8 +124,8 @@
         searchAndHighlight(findInput.value)
       );
 
-      findPrevButton.addEventListener("click", () => navigateFind("prev"));
-      findNextButton.addEventListener("click", () => navigateFind("next"));
+      findPrev.addEventListener("click", () => navigateFind("prev"));
+      findNext.addEventListener("click", () => navigateFind("next"));
 
       function searchAndHighlight(query) {
         resetHighlights();
