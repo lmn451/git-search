@@ -6,7 +6,9 @@
 
 🌟 **What's Git Search?**
 
-Git Search is your ultimate code detective in VS Code. It's like having a time machine for your codebase, ready to reveal the secrets hidden in the Git logs - and you don't even need a flux capacitor!
+Working with legacy code or unfamiliar projects often presents a host of challenges, particularly when trying to decipher what's happening and what has transpired. Frequently, I find that commit messages are either missing or lack sufficient detail. In the best-case scenario, they might point to a Jira ticket, but as we know, that doesn't always shed much light on the issue. In the worst cases, I encounter unhelpful commit messages like "fix."
+
+Regularly, there's a need to understand how a specific variable or function was created or used. Typically, this would involve using git log -S in the terminal and manually opening each commit to examine the changes. This process can be quite tedious. To streamline this task, I created this extension.
 
 🎸 **Why It's a Game Changer**:
 
