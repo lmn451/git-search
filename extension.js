@@ -101,7 +101,7 @@ async function executeGitSearch(query, panel) {
   try {
     const workspaceFolderPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
     const repoUrl = await getRepoUrl();
-    const logCommand = `git log --pretty=format:"%h|%an|%cd" -G"${query}" ${
+    const logCommand = `git log --pretty=format:"%H|%an|%cd" -G"${query}" ${
       lastCommitDate ? `--before="${lastCommitDate}"` : ""
     } -n ${pageSize}`;
     const logOutput = await executeCommand(logCommand, workspaceFolderPath);
@@ -111,7 +111,7 @@ async function executeGitSearch(query, panel) {
     for (const commitEntry of commits) {
       if (commitEntry.trim() === "") continue;
       const [commitHash, author, commitDate] = commitEntry.split("|");
-      const diffCommand = `git diff -U3 --color=always ${commitHash}^! | grep --color=always -1 "${query}"`;
+      const diffCommand = `git diff -U3 --color=always "${commitHash}^!" | grep --color=always -1 "${query}"`;
       const diffOutput = await executeCommand(diffCommand, workspaceFolderPath);
       const diffHtml = convert.toHtml(sanitize(diffOutput));
       content += `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author}<br><pre>${diffHtml}</pre></li>`;
