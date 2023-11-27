@@ -107,7 +107,7 @@ async function executeGitSearch(query, panel) {
     const logOutput = await executeCommand(logCommand, workspaceFolderPath);
     const commits = logOutput.split("\n");
     lastCommitDate = adjustDate(commits.at(-1).split("|")[2]);
-    let content = "<ul>";
+    let content;
     for (const commitEntry of commits) {
       if (commitEntry.trim() === "") continue;
       const [commitHash, author, commitDate] = commitEntry.split("|");
@@ -116,12 +116,11 @@ async function executeGitSearch(query, panel) {
       const diffHtml = convert.toHtml(sanitize(diffOutput));
       content += `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author}<br><pre>${diffHtml}</pre></li>`;
     }
-    content += "</ul>";
     panel.webview.postMessage({
       command: isLoadMore ? "appendResults" : "showResults",
-      text: content,
+      text: content && `<ul>${content}</ul> `,
       latestQuery,
-      isLoadMore: true,
+      isLoadMore: !!content,
     });
   } catch (error) {
     panel.webview.postMessage({
