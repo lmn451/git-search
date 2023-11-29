@@ -5,7 +5,7 @@ const path = require("path");
 const Convert = require("ansi-to-html");
 const convert = new Convert();
 const sanitize = require("./src/sanitize");
-const { adjustDate } = require("./src/helpers");
+const { adjustDate, formatDate } = require("./src/helpers");
 
 const pageSize = 10;
 let latestQuery = "";
@@ -107,14 +107,16 @@ async function executeGitSearch(query, panel) {
     const logOutput = await executeCommand(logCommand, workspaceFolderPath);
     const commits = logOutput.split("\n");
     lastCommitDate = adjustDate(commits.at(-1).split("|")[2]);
-    let content;
+    let content = "";
     for (const commitEntry of commits) {
       if (commitEntry.trim() === "") continue;
       const [commitHash, author, commitDate] = commitEntry.split("|");
       const diffCommand = `git diff -U3 --color=always "${commitHash}^!" | grep --color=always -1 "${query}"`;
       const diffOutput = await executeCommand(diffCommand, workspaceFolderPath);
       const diffHtml = convert.toHtml(sanitize(diffOutput));
-      content += `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author}<br><pre>${diffHtml}</pre></li>`;
+      content += `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author} at ${formatDate(
+        commitDate
+      )}<br><pre>${diffHtml}</pre></li>`;
     }
     panel.webview.postMessage({
       command: isLoadMore ? "appendResults" : "showResults",
