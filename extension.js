@@ -25,7 +25,7 @@ function showPanel(context) {
     "gitSearch",
     "Git Search",
     vscode.ViewColumn.One,
-    { enableScripts: true, retainContextWhenHidden: true }
+    { enableScripts: true }
   );
 
   panel.webview.html = getWebviewContent();
@@ -102,6 +102,7 @@ async function executeGitSearch(query, panel) {
       text: "",
     });
   }
+
   try {
     const workspaceFolderPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
     const repoUrl = await getRepoUrl(workspaceFolderPath);
@@ -109,22 +110,35 @@ async function executeGitSearch(query, panel) {
       lastCommitDate ? `--before="${lastCommitDate}"` : ""
     } -n ${pageSize}`;
     const logOutput = await executeCommand(logCommand, workspaceFolderPath);
-    const commits = logOutput.split("\n");
+    const commits = logOutput.split("\n").filter((line) => line.trim() !== "");
     lastCommitDate = adjustDate(commits.at(-1).split("|")[2]);
-    let content = "";
-    for (const commitEntry of commits) {
-      if (commitEntry.trim() === "") continue;
+
+    const diffPromises = commits.map((commitEntry) => {
       const [commitHash, author, commitDate] = commitEntry.split("|");
       const diffCommand = `git diff -U3 --color=always "${commitHash}^!" | grep --color=always -1 "${query}"`;
-      const diffOutput = await executeCommand(diffCommand, workspaceFolderPath);
-      const diffHtml = convert.toHtml(sanitize(diffOutput));
-      content += `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author} at ${formatDate(
-        commitDate
-      )}<br><pre>${diffHtml}</pre></li>`;
-    }
+      return executeCommand(diffCommand, workspaceFolderPath)
+        .then((diffOutput) => ({ commitHash, diffOutput, commitDate, author }))
+        .catch((error) => {
+          console.error(`Error processing commit ${commitHash}: ${error}`);
+          return null; // Continue processing other commits
+        });
+    });
+
+    const diffResults = await Promise.all(diffPromises);
+    let contentArray = diffResults.map(
+      ({ commitHash, diffOutput, commitDate, author }) => {
+        if (!commitHash || !diffOutput) return "";
+        const diffHtml = convert.toHtml(sanitize(diffOutput));
+        return `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author} at ${formatDate(
+          commitDate
+        )}<br><pre>${diffHtml}</pre></li>`;
+      }
+    );
+
+    let content = contentArray.join("");
     panel.webview.postMessage({
       command: isLoadMore ? "appendResults" : "showResults",
-      text: content && `<ul>${content}</ul>`,
+      text: content ? `<ul>${content}</ul>` : "No results found",
       latestQuery,
       isLoadMore: !!content,
     });
