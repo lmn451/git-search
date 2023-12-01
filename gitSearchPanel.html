@@ -91,7 +91,7 @@
         <button id="searchBtn">Search</button>
         <button id="resetBtn">Reset</button>
       </div>
-      <div id="findWidget" class="find-widget">
+      <div id="findWidget" class="find-widget" style="display: none">
         <input type="text" id="findInput" placeholder="Find" />
         <span id="matchCount"></span>
         <button id="findPrev">Previous</button>
@@ -106,6 +106,14 @@
     <script>
       //Search Logic
       const vscode = acquireVsCodeApi();
+
+      function ifEnterSearch(e) {
+        e.key === "Enter" &&
+          vscode.postMessage({ command: "search", text: searchQuery.value });
+      }
+
+      searchQuery.addEventListener("keydown", ifEnterSearch);
+
       searchBtn.addEventListener("click", () => {
         const query = searchQuery.value;
         vscode.postMessage({ command: "search", text: query });
@@ -147,6 +155,21 @@
             break;
         }
       });
+
+      //Toggle find
+      let findTriggered = false;
+
+      document.addEventListener("keydown", function (event) {
+        // Check for CMD+F on Mac or CTRL+F on Windows
+        if ((event.metaKey || event.ctrlKey) && event.key === "f") {
+          event.preventDefault(); // Prevent the default find behavior
+          findTriggered = !findTriggered;
+          findWidget.style.display = findTriggered ? "flex" : "none";
+          if (findTriggered) findInput.focus();
+          else searchQuery.focus();
+        }
+      });
+
       // Find Logic
       let findMatches = [];
       let currentFindIndex = -1;
@@ -154,7 +177,10 @@
       findInput.addEventListener("input", () =>
         searchAndHighlight(findInput.value)
       );
-
+      findInput.addEventListener(
+        "keydown",
+        (e) => e.key === "Enter" && navigateFind("next")
+      );
       findPrev.addEventListener("click", () => navigateFind("prev"));
       findNext.addEventListener("click", () => navigateFind("next"));
 
