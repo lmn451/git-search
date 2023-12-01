@@ -4,16 +4,13 @@
     <meta charset="UTF-8" />
     <style>
       body {
-        font-family: Arial, sans-serif;
+        font-family: Roboto, monospace;
         display: grid;
         grid-template-rows: auto 1fr auto;
         height: 100vh;
       }
       :focus {
         border-color: var(--vscode-focusBorder);
-      }
-      pre {
-        font-weight: 600;
       }
       input {
         background-color: var(--vscode-input-background);
@@ -87,7 +84,6 @@
     <header>
       <div class="search-container">
         <input
-          autofocus
           type="text"
           id="searchQuery"
           placeholder="Enter search query (regexp friendly)"
