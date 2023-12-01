@@ -13,7 +13,8 @@
     "vscode": "^1.84.0"
   },
   "categories": [
-    "Other", "Visualization"
+    "Other",
+    "Visualization"
   ],
   "activationEvents": [],
   "main": "./extension.js",
@@ -38,6 +39,7 @@
     "eslint": "^8.52.0",
     "glob": "^10.3.10",
     "mocha": "^10.2.0",
+    "sinon": "^17.0.1",
     "typescript": "^5.2.2"
   },
   "dependencies": {

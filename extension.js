@@ -15,80 +15,84 @@ let lastCommitDate = "";
 function activate(context) {
   let disposable = vscode.commands.registerCommand(
     "git-search.showPanel",
-    () => {
-      const panel = vscode.window.createWebviewPanel(
-        "gitSearch",
-        "Git Search",
-        vscode.ViewColumn.One,
-        { enableScripts: true, retainContextWhenHidden: true }
-      );
-      panel.webview.html = getWebviewContent();
-      panel.webview.onDidReceiveMessage(
-        async (message) => {
-          switch (message.command) {
-            case "search":
-              latestQuery = message.text;
-              isLoadMore = false;
-              lastCommitDate = "";
-              panel.webview.postMessage({
-                command: "showResults",
-                text: "Loading",
-              });
-              await executeGitSearch(message.text, panel);
-              break;
-            case "loadMore":
-              isLoadMore = true;
-              await executeGitSearch(latestQuery, panel);
-              break;
-            case "reset":
-              latestQuery = "";
-              isLoadMore = false;
-              lastCommitDate = "";
-              panel.webview.postMessage({ command: "reset", text: "" });
-              break;
-          }
-        },
-        undefined,
-        context.subscriptions
-      );
-    }
+    showPanel.bind(null, context)
   );
   context.subscriptions.push(disposable);
 }
 
-function getRepoUrl() {
+function showPanel(context) {
+  const panel = vscode.window.createWebviewPanel(
+    "gitSearch",
+    "Git Search",
+    vscode.ViewColumn.One,
+    { enableScripts: true, retainContextWhenHidden: true }
+  );
+
+  panel.webview.html = getWebviewContent();
+  panel.webview.onDidReceiveMessage(
+    (message) => handleWebviewMessage(message, panel),
+    undefined,
+    context.subscriptions
+  );
+}
+
+function handleWebviewMessage(message, panel) {
+  switch (message.command) {
+    case "search":
+      handleSearchCommand(message.text, panel);
+      break;
+    case "loadMore":
+      handleLoadMoreCommand(panel);
+      break;
+    case "reset":
+      handleResetCommand(panel);
+      break;
+  }
+}
+
+async function handleSearchCommand(query, panel) {
+  latestQuery = query;
+  isLoadMore = false;
+  lastCommitDate = "";
+  panel.webview.postMessage({ command: "showResults", text: "Loading" });
+  await executeGitSearch(query, panel);
+}
+
+async function handleLoadMoreCommand(panel) {
+  isLoadMore = true;
+  await executeGitSearch(latestQuery, panel);
+}
+
+function handleResetCommand(panel) {
+  latestQuery = "";
+  isLoadMore = false;
+  lastCommitDate = "";
+  panel.webview.postMessage({ command: "reset", text: "" });
+}
+
+function getRepoUrl(workspaceFolderPath) {
   return new Promise((resolve, reject) => {
-    if (
-      vscode.workspace.workspaceFolders &&
-      vscode.workspace.workspaceFolders.length > 0
-    ) {
-      const workspaceFolderPath =
-        vscode.workspace.workspaceFolders[0].uri.fsPath;
-      exec(
-        "git config --get remote.origin.url",
-        { cwd: workspaceFolderPath },
-        (error, stdout, stderr) => {
-          if (error || stderr || !stdout) {
-            resolve("");
-          } else {
-            const repoUrl = stdout
-              .trim()
-              .replace(".git", "")
-              .replace("git@github.com:", "https://github.com/");
-            resolve(repoUrl);
-          }
+    exec(
+      "git config --get remote.origin.url",
+      { cwd: workspaceFolderPath },
+      (error, stdout, stderr) => {
+        if (error || stderr || !stdout) {
+          resolve("");
+        } else {
+          const repoUrl = stdout
+            .trim()
+            .replace(".git", "")
+            .replace("git@github.com:", "https://github.com/");
+          resolve(repoUrl);
         }
-      );
-    } else {
-      resolve("");
-    }
+      }
+    );
   });
 }
 
 function getWebviewContent() {
   const htmlFilePath = path.join(__dirname, "gitSearchPanel.html");
-  let htmlContent = fs.readFileSync(htmlFilePath, "utf8");
-  return htmlContent;
+  return fs.readFileSync(htmlFilePath, "utf8");
 }
 
 async function executeGitSearch(query, panel) {
@@ -100,7 +104,7 @@ async function executeGitSearch(query, panel) {
   }
   try {
     const workspaceFolderPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-    const repoUrl = await getRepoUrl();
+    const repoUrl = await getRepoUrl(workspaceFolderPath);
     const logCommand = `git log --pretty=format:"%H|%an|%cd" -G"${query}" ${
       lastCommitDate ? `--before="${lastCommitDate}"` : ""
     } -n ${pageSize}`;
@@ -120,7 +124,7 @@ async function executeGitSearch(query, panel) {
     }
     panel.webview.postMessage({
       command: isLoadMore ? "appendResults" : "showResults",
-      text: content && `<ul>${content}</ul> `,
+      text: content && `<ul>${content}</ul>`,
       latestQuery,
       isLoadMore: !!content,
     });
@@ -147,4 +151,12 @@ function deactivate() {}
 module.exports = {
   activate,
   deactivate,
+  handleSearchCommand,
+  handleLoadMoreCommand,
+  handleResetCommand,
+  handleWebviewMessage,
+  getRepoUrl,
+  getWebviewContent,
+  executeGitSearch,
+  executeCommand,
 };
