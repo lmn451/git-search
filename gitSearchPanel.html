@@ -9,9 +9,15 @@
         grid-template-rows: auto 1fr auto;
         height: 100vh;
       }
+
+      header {
+        height: 75px;
+      }
+
       :focus {
         border-color: var(--vscode-focusBorder);
       }
+
       input {
         background-color: var(--vscode-input-background);
         color: var(--vscode-input-foreground);
@@ -26,6 +32,7 @@
         background-color: var(--vscode-button-background);
         color: var(--vscode-button-foreground);
       }
+
       button:hover {
         background-color: var(--vscode-button-hoverBackground);
       }
@@ -60,7 +67,6 @@
       .find-widget {
         display: flex;
         justify-content: flex-end;
-        margin: 8px;
         gap: 8px;
         align-items: center;
       }
@@ -68,9 +74,11 @@
       .highlight {
         background-color: yellow;
       }
+
       .current-highlight {
         background-color: orange;
       }
+
       .search-container {
         justify-content: flex-start;
         display: flex;
