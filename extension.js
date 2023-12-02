@@ -12,6 +12,14 @@ let latestQuery = "";
 let isLoadMore = false;
 let lastCommitDate = "";
 
+const getWorkspace = () => {
+  try {
+    return vscode.workspace.workspaceFolders[0].uri.fsPath;
+  } catch (err) {
+    return null;
+  }
+};
+
 function activate(context) {
   let disposable = vscode.commands.registerCommand(
     "git-search.showPanel",
@@ -102,9 +110,13 @@ async function executeGitSearch(query, panel) {
       text: "",
     });
   }
-
   try {
-    const workspaceFolderPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+    const workspaceFolderPath = getWorkspace();
+    if (!workspaceFolderPath)
+      return panel.webview.postMessage({
+        command: "showResults",
+        text: `No workspace found`,
+      });
     const repoUrl = await getRepoUrl(workspaceFolderPath);
     const logCommand = `git log --pretty=format:"%H|%an|%cd" -G"${query}" ${
       lastCommitDate ? `--before="${lastCommitDate}"` : ""
