@@ -122,6 +122,12 @@ async function executeGitSearch(query, panel) {
       lastCommitDate ? `--before="${lastCommitDate}"` : ""
     } -n ${pageSize}`;
     const logOutput = await executeCommand(logCommand, workspaceFolderPath);
+    if (!logOutput)
+      return panel.webview.postMessage({
+        command: "showResults",
+        text: null,
+        isLoadMore: false,
+      });
     const commits = logOutput.split("\n").filter((line) => line.trim() !== "");
     lastCommitDate = adjustDate(commits.at(-1).split("|")[2]);
 
