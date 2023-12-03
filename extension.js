@@ -3,7 +3,13 @@ const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const Convert = require("ansi-to-html");
-const convert = new Convert();
+const convert = new Convert({
+  colors: [
+    "#000000", // Black
+    "#DB7093", // Red
+    // "#00FF00", // Green
+  ],
+});
 const sanitize = require("./src/sanitize");
 const { adjustDate, formatDate } = require("./src/helpers");
 
