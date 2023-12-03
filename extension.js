@@ -9,6 +9,7 @@ const convert = new Convert({
     "#DB7093", // Red
     // "#00FF00", // Green
   ],
+  stream: true,
 });
 const sanitize = require("./src/sanitize");
 const { adjustDate, formatDate } = require("./src/helpers");
@@ -130,7 +131,7 @@ async function executeGitSearch(query, panel) {
     const logOutput = await executeCommand(logCommand, workspaceFolderPath);
     if (!logOutput)
       return panel.webview.postMessage({
-        command: "showResults",
+        command: isLoadMore ? "appendResults" : "showResults",
         text: null,
         isLoadMore: false,
       });
