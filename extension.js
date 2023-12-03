@@ -150,7 +150,7 @@ async function executeGitSearch(query, panel) {
 
     const diffResults = await Promise.all(diffPromises);
     let contentArray = diffResults.map(
-      ({ commitHash, diffOutput, commitDate, author }) => {
+      ({ commitHash, diffOutput, commitDate, author } = {}) => {
         if (!commitHash || !diffOutput) return "";
         const diffHtml = convert.toHtml(sanitize(diffOutput));
         return `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author} at ${formatDate(
