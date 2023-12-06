@@ -3,7 +3,7 @@
   "displayName": "git-search",
   "description": "git log -G in your VS Code",
   "icon": "./assets/logo.png",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "publisher": "lmn451",
   "repository": {
     "type": "git",
@@ -16,6 +16,7 @@
     "Other",
     "Visualization"
   ],
+  "keywords": ["git", "search", "find", "log", "git log", "git search"],
   "activationEvents": [],
   "main": "./extension.js",
   "contributes": {

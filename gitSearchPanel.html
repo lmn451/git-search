@@ -88,6 +88,10 @@
         display: flex;
         gap: 8px;
       }
+      .modeContainer {
+        display: flex;
+        align-items: center;
+      }
     </style>
     <title>Git Search</title>
   </head>
@@ -100,6 +104,10 @@
           id="searchQuery"
           placeholder="Enter search query (regexp friendly)"
         />
+        <div class="modeContainer">
+          <input type="checkbox" id="modeG" name="modeG" />
+          <label for="modeG">G mode</label>
+        </div>
         <button id="searchBtn">Search</button>
         <button id="resetBtn">Reset</button>
       </div>
@@ -116,6 +124,15 @@
     </footer>
 
     <script>
+      // Mode logic
+
+      modeG.addEventListener("change", (e) => {
+        vscode.postMessage({
+          command: "changeMode",
+          mode: e.target.checked ? "G" : "S",
+        });
+      });
+
       //Search Logic
       const vscode = acquireVsCodeApi();
 

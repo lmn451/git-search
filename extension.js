@@ -18,6 +18,7 @@ const pageSize = 10;
 let latestQuery = "";
 let isLoadMore = false;
 let lastCommitDate = "";
+let mode = "S";
 
 const getWorkspace = () => {
   try {
@@ -62,6 +63,9 @@ function handleWebviewMessage(message, panel) {
     case "reset":
       handleResetCommand(panel);
       break;
+    case "changeMode":
+      handleChangeMode(message.mode);
+      break;
   }
 }
 
@@ -83,6 +87,11 @@ function handleResetCommand(panel) {
   isLoadMore = false;
   lastCommitDate = "";
   panel.webview.postMessage({ command: "reset", text: "" });
+}
+
+function handleChangeMode(value) {
+  if (!(value === "G" || value === "S")) return;
+  mode = value;
 }
 
 function getRepoUrl(workspaceFolderPath) {
@@ -110,8 +119,9 @@ function getWebviewContent() {
   return fs.readFileSync(htmlFilePath, "utf8");
 }
 
-async function executeGitSearch(query, panel) {
-  if (!query.trim()) {
+async function executeGitSearch(dirtyQuery, panel) {
+  const query = dirtyQuery.trim();
+  if (!query) {
     return panel.webview.postMessage({
       command: "showResults",
       text: "",
@@ -125,7 +135,7 @@ async function executeGitSearch(query, panel) {
         text: `No workspace found`,
       });
     const repoUrl = await getRepoUrl(workspaceFolderPath);
-    const logCommand = `git log --pretty=format:"%H|%an|%cd" -G"${query}" ${
+    const logCommand = `git log --pretty=format:"%H|%an|%cd" -${mode}"${query}" ${
       lastCommitDate ? `--before="${lastCommitDate}"` : ""
     } -n ${pageSize}`;
     const logOutput = await executeCommand(logCommand, workspaceFolderPath);
