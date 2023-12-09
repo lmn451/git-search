@@ -102,9 +102,12 @@
         <input
           type="text"
           id="searchQuery"
-          placeholder="Enter search query (regexp friendly)"
+          placeholder="Enter search query (regexp friendly when G mode is enabled)"
         />
-        <div class="modeContainer">
+        <div
+          class="modeContainer"
+          title="'G mode' refers to git log -G, a broader search than the standard 'S mode'"
+        >
           <input type="checkbox" id="modeG" name="modeG" />
           <label for="modeG">G mode</label>
         </div>
