@@ -14,11 +14,11 @@ const convert = new Convert({
 const sanitize = require("./src/sanitize");
 const { adjustDate, formatDate } = require("./src/helpers");
 
-const pageSize = 10;
+let PAGE_SIZE = 10;
 let latestQuery = "";
 let isLoadMore = false;
 let lastCommitDate = "";
-let mode = "S";
+let MODE = "S";
 
 const getWorkspace = () => {
   try {
@@ -91,7 +91,7 @@ function handleResetCommand(panel) {
 
 function handleChangeMode(value) {
   if (!(value === "G" || value === "S")) return;
-  mode = value;
+  MODE = value;
 }
 
 function getRepoUrl(workspaceFolderPath) {
@@ -135,9 +135,9 @@ async function executeGitSearch(dirtyQuery, panel) {
         text: `No workspace found`,
       });
     const repoUrl = await getRepoUrl(workspaceFolderPath);
-    const logCommand = `git log --pretty=format:"%H|%an|%cd" -${mode}"${query}" ${
+    const logCommand = `git log --pretty=format:"%H|%an|%cd" -${MODE}"${query}" ${
       lastCommitDate ? `--before="${lastCommitDate}"` : ""
-    } -n ${pageSize}`;
+    } -n ${PAGE_SIZE}`;
     const logOutput = await executeCommand(logCommand, workspaceFolderPath);
     if (!logOutput)
       return panel.webview.postMessage({
@@ -145,7 +145,12 @@ async function executeGitSearch(dirtyQuery, panel) {
         text: null,
         isLoadMore: false,
       });
-    const commits = logOutput.split("\n").filter((line) => line.trim() !== "");
+
+    const commits = logOutput
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
     lastCommitDate = adjustDate(commits.at(-1).split("|")[2]);
 
     const diffPromises = commits.map((commitEntry) => {
@@ -175,12 +180,12 @@ async function executeGitSearch(dirtyQuery, panel) {
       command: isLoadMore ? "appendResults" : "showResults",
       text: content ? `<ul>${content}</ul>` : "No results found",
       latestQuery,
-      isLoadMore: !!content,
+      isLoadMore: content ? content.length == PAGE_SIZE : false,
     });
   } catch (error) {
     panel.webview.postMessage({
       command: "showResults",
-      text: `Error: ${error.message}`,
+      text: `Error: ${error}`,
     });
   }
 }
