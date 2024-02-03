@@ -33,6 +33,7 @@ function activate(context) {
     "git-search.showPanel",
     showPanel.bind(null, context)
   );
+
   context.subscriptions.push(disposable);
 }
 
@@ -157,23 +158,24 @@ async function executeGitSearch(dirtyQuery, panel) {
       const [commitHash, author, commitDate] = commitEntry.split("|");
       const diffCommand = `git diff -U3 --color=always "${commitHash}^!" | grep --color=always -1 "${query}"`;
       return executeCommand(diffCommand, workspaceFolderPath)
-        .then((diffOutput) => ({ commitHash, diffOutput, commitDate, author }))
+        .then((diffOutput) => {
+          return { commitHash, diffOutput, commitDate, author };
+        })
         .catch((error) => {
-          console.error(`Error processing commit ${commitHash}: ${error}`);
+          vscode.window.showInformationMessage(error);
           return null; // Continue processing other commits
         });
     });
 
     const diffResults = await Promise.all(diffPromises);
-    let contentArray = diffResults.map(
-      ({ commitHash, diffOutput, commitDate, author } = {}) => {
-        if (!commitHash || !diffOutput) return "";
-        const diffHtml = convert.toHtml(sanitize(diffOutput));
-        return `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author} at ${formatDate(
-          commitDate
-        )}<br><pre>${diffHtml}</pre></li>`;
-      }
-    );
+    const contentArray = diffResults.map((diff) => {
+      if (!diff) return "";
+      const { commitHash, diffOutput, commitDate, author } = diff;
+      const diffHtml = convert.toHtml(sanitize(diffOutput));
+      return `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author} at ${formatDate(
+        commitDate
+      )}<br><pre>${diffHtml}</pre></li>`;
+    });
 
     let content = contentArray.join("");
     panel.webview.postMessage({

@@ -3,20 +3,27 @@
   "displayName": "git-search",
   "description": "git log -S/G in your VS Code",
   "icon": "./assets/logo.png",
-  "version": "0.1.11",
+  "version": "0.1.13",
   "publisher": "lmn451",
   "repository": {
     "type": "git",
     "url": "https://github.com/lmn451/git-search"
   },
   "engines": {
-    "vscode": "^1.84.0"
+    "vscode": "^1.86.0"
   },
   "categories": [
     "Other",
     "Visualization"
   ],
-  "keywords": ["git", "search", "find", "log", "git log", "git search"],
+  "keywords": [
+    "git",
+    "search",
+    "find",
+    "log",
+    "git log",
+    "git search"
+  ],
   "activationEvents": [],
   "main": "./extension.js",
   "contributes": {
@@ -30,18 +37,19 @@
   "scripts": {
     "lint": "eslint .",
     "pretest": "pnpm run lint",
+    "prettier": "prettier -w src",
     "test": "node ./test/runTest.js"
   },
   "devDependencies": {
-    "@types/mocha": "^10.0.3",
-    "@types/node": "18.x",
-    "@types/vscode": "^1.84.0",
-    "@vscode/test-electron": "^2.3.6",
-    "eslint": "^8.52.0",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "~18.19.14",
+    "@types/vscode": "^1.86.0",
+    "@vscode/test-electron": "^2.3.9",
+    "eslint": "^8.56.0",
     "glob": "^10.3.10",
     "mocha": "^10.2.0",
     "sinon": "^17.0.1",
-    "typescript": "^5.2.2"
+    "typescript": "^5.3.3"
   },
   "dependencies": {
     "ansi-to-html": "^0.7.2"
