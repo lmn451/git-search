@@ -182,7 +182,7 @@ async function executeGitSearch(dirtyQuery, panel) {
       command: isLoadMore ? "appendResults" : "showResults",
       text: content ? `<ul>${content}</ul>` : "No results found",
       latestQuery,
-      isLoadMore: content ? content.length == PAGE_SIZE : false,
+      isLoadMore: contentArray ? contentArray.length == PAGE_SIZE : false,
     });
   } catch (error) {
     panel.webview.postMessage({
