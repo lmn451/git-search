@@ -3,6 +3,7 @@ const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const Convert = require("ansi-to-html");
+const { highlightQueryInHtml } = require("./src/customGrep");
 const convert = new Convert({
   colors: [
     "#000000", // Black
@@ -156,13 +157,11 @@ async function executeGitSearch(dirtyQuery, panel) {
 
     const diffPromises = commits.map((commitEntry) => {
       const [commitHash, author, commitDate] = commitEntry.split("|");
-      const diffCommand = `git diff -U3 --color=always "${commitHash}^!" | grep --color=always -1 "${query}"`;
+      const diffCommand = `git diff -U3 --color=always "${commitHash}^!" | grep --color=none -1 "${query}"`;
       return executeCommand(diffCommand, workspaceFolderPath)
-        .then((diffOutput) => {
-          return { commitHash, diffOutput, commitDate, author };
-        })
+        .then((diffOutput) => ({ commitHash, diffOutput, commitDate, author }))
         .catch((error) => {
-          vscode.window.showInformationMessage(error);
+          vscode.window.showErrorMessage(error.stack);
           return null; // Continue processing other commits
         });
     });
@@ -171,7 +170,11 @@ async function executeGitSearch(dirtyQuery, panel) {
     const contentArray = diffResults.map((diff) => {
       if (!diff) return "";
       const { commitHash, diffOutput, commitDate, author } = diff;
-      const diffHtml = convert.toHtml(sanitize(diffOutput));
+      const highlightedDiff = highlightQueryInHtml(
+        sanitize(diffOutput),
+        sanitize(query)
+      );
+      const diffHtml = convert.toHtml(highlightedDiff);
       return `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author} at ${formatDate(
         commitDate
       )}<br><pre>${diffHtml}</pre></li>`;
@@ -185,6 +188,7 @@ async function executeGitSearch(dirtyQuery, panel) {
       isLoadMore: contentArray ? contentArray.length == PAGE_SIZE : false,
     });
   } catch (error) {
+    vscode.window.showErrorMessage(error.stack);
     panel.webview.postMessage({
       command: "showResults",
       text: `Error: ${error}`,
