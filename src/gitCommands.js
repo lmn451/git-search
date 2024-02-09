@@ -35,8 +35,13 @@ async function getRelatedCommitsInfo(
   return await executeCommand(logCommand, workspaceFolderPath);
 }
 
-async function getRelatedDiffs(workspaceFolderPath, commitHash, query) {
-  const diffCommand = `git diff -U3 --color=always "${commitHash}^!" | grep --color=none -1 "${query}"`;
+async function getRelatedDiffs(
+  workspaceFolderPath,
+  commitHash,
+  query,
+  numberOfContextLines = 1
+) {
+  const diffCommand = `git diff -U3 --color=always "${commitHash}^!" | grep --color=none -${numberOfContextLines} "${query}"`;
   return await executeCommand(diffCommand, workspaceFolderPath);
 }
 

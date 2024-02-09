@@ -10,6 +10,7 @@ const Convert = require("ansi-to-html");
 const { highlightQueryInHtml } = require("./src/customGrep");
 const sanitize = require("./src/sanitize");
 const { adjustDate, formatDate } = require("./src/helpers");
+
 const convert = new Convert({
   colors: [
     "#000000", // Black
@@ -20,10 +21,11 @@ const convert = new Convert({
 });
 
 let PAGE_SIZE = 10;
+let MODE = "S";
+let NUMBER_OF_COTEXT_LINES = 1;
 let latestQuery = "";
 let isLoadMore = false;
 let lastCommitDate = "";
-let MODE = "S";
 
 const getWorkspace = () => {
   try {
@@ -72,7 +74,15 @@ function handleWebviewMessage(message, panel) {
     case "changeMode":
       handleChangeMode(message.mode);
       break;
+    case "updateNumberOfContextLines":
+      handleUpdateNumberOfContextLines(message, panel);
   }
+}
+
+async function handleUpdateNumberOfContextLines(message, panel) {
+  NUMBER_OF_COTEXT_LINES = message.value;
+  lastCommitDate = "";
+  await executeGitSearch(latestQuery, panel);
 }
 
 async function handleSearchCommand(query, panel) {
@@ -145,7 +155,12 @@ async function executeGitSearch(dirtyQuery, panel) {
 
     const diffPromises = commits.map((commitEntry) => {
       const [commitHash, author, commitDate] = commitEntry.split("|");
-      return getRelatedDiffs(workspaceFolderPath, commitHash, query)
+      return getRelatedDiffs(
+        workspaceFolderPath,
+        commitHash,
+        query,
+        NUMBER_OF_COTEXT_LINES
+      )
         .then((diffOutput) => ({ commitHash, diffOutput, commitDate, author }))
         .catch((error) => {
           vscode.window.showErrorMessage(error.stack);

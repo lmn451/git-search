@@ -3,7 +3,7 @@
   "displayName": "git-search",
   "description": "git log -S/G in your VS Code",
   "icon": "./assets/logo.png",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "publisher": "lmn451",
   "repository": {
     "type": "git",
