@@ -1,9 +1,15 @@
+const {
+  getRelatedCommitsInfo,
+  getRelatedDiffs,
+  getRepoUrl,
+} = require("./src/gitCommands");
 const vscode = require("vscode");
-const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const Convert = require("ansi-to-html");
 const { highlightQueryInHtml } = require("./src/customGrep");
+const sanitize = require("./src/sanitize");
+const { adjustDate, formatDate } = require("./src/helpers");
 const convert = new Convert({
   colors: [
     "#000000", // Black
@@ -12,8 +18,6 @@ const convert = new Convert({
   ],
   stream: true,
 });
-const sanitize = require("./src/sanitize");
-const { adjustDate, formatDate } = require("./src/helpers");
 
 let PAGE_SIZE = 10;
 let latestQuery = "";
@@ -96,26 +100,6 @@ function handleChangeMode(value) {
   MODE = value;
 }
 
-function getRepoUrl(workspaceFolderPath) {
-  return new Promise((resolve, reject) => {
-    exec(
-      "git config --get remote.origin.url",
-      { cwd: workspaceFolderPath },
-      (error, stdout, stderr) => {
-        if (error || stderr || !stdout) {
-          resolve("");
-        } else {
-          const repoUrl = stdout
-            .trim()
-            .replace(".git", "")
-            .replace("git@github.com:", "https://github.com/");
-          resolve(repoUrl);
-        }
-      }
-    );
-  });
-}
-
 function getWebviewContent() {
   const htmlFilePath = path.join(__dirname, "gitSearchPanel.html");
   return fs.readFileSync(htmlFilePath, "utf8");
@@ -136,11 +120,15 @@ async function executeGitSearch(dirtyQuery, panel) {
         command: "showResults",
         text: `No workspace found`,
       });
+
     const repoUrl = await getRepoUrl(workspaceFolderPath);
-    const logCommand = `git log --pretty=format:"%H|%an|%cd" -${MODE}"${query}" ${
-      lastCommitDate ? `--before="${lastCommitDate}"` : ""
-    } -n ${PAGE_SIZE}`;
-    const logOutput = await executeCommand(logCommand, workspaceFolderPath);
+    const logOutput = await getRelatedCommitsInfo(
+      workspaceFolderPath,
+      query,
+      MODE,
+      lastCommitDate,
+      PAGE_SIZE
+    );
     if (!logOutput)
       return panel.webview.postMessage({
         command: isLoadMore ? "appendResults" : "showResults",
@@ -157,8 +145,7 @@ async function executeGitSearch(dirtyQuery, panel) {
 
     const diffPromises = commits.map((commitEntry) => {
       const [commitHash, author, commitDate] = commitEntry.split("|");
-      const diffCommand = `git diff -U3 --color=always "${commitHash}^!" | grep --color=none -1 "${query}"`;
-      return executeCommand(diffCommand, workspaceFolderPath)
+      return getRelatedDiffs(workspaceFolderPath, commitHash, query)
         .then((diffOutput) => ({ commitHash, diffOutput, commitDate, author }))
         .catch((error) => {
           vscode.window.showErrorMessage(error.stack);
@@ -196,16 +183,6 @@ async function executeGitSearch(dirtyQuery, panel) {
   }
 }
 
-function executeCommand(command, cwd) {
-  return new Promise((resolve, reject) => {
-    exec(command, { cwd }, (error, stdout, stderr) => {
-      if (error) reject(error);
-      if (stderr) reject(new Error(stderr));
-      resolve(stdout);
-    });
-  });
-}
-
 function deactivate() {}
 
 module.exports = {
@@ -215,8 +192,6 @@ module.exports = {
   handleLoadMoreCommand,
   handleResetCommand,
   handleWebviewMessage,
-  getRepoUrl,
   getWebviewContent,
   executeGitSearch,
-  executeCommand,
 };

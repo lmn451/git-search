@@ -4,6 +4,7 @@ const vscode = require("vscode");
 const child_process = require("child_process");
 const fs = require("fs");
 const extension = require("../../extension");
+const { executeCommand } = require("../../src/gitCommands");
 
 describe("Git Search Extension Tests", () => {
   beforeEach(() => {
@@ -57,7 +58,7 @@ describe("Git Search Extension Tests", () => {
 
   xit("should execute command and return result", async () => {
     child_process.exec.callsArgWith(2, null, "output", "");
-    const result = await extension.executeCommand("git status", ".");
+    const result = await executeCommand("git status", ".");
     assert.equal(result, "output");
   });
 

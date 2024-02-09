@@ -1,3 +1,4 @@
+const { exec } = require("child_process");
 module.exports = {
   adjustDate: (dateStr) => {
     try {
@@ -40,5 +41,15 @@ module.exports = {
     }
 
     return `${formattedDate} (approximately ${relativeTime})`;
+  },
+
+  executeCommand: function executeCommand(command, cwd) {
+    return new Promise((resolve, reject) => {
+      exec(command, { cwd }, (error, stdout, stderr) => {
+        if (error) reject(error);
+        if (stderr) reject(new Error(stderr));
+        resolve(stdout);
+      });
+    });
   },
 };
