@@ -82,6 +82,7 @@ function handleWebviewMessage(message, panel) {
 async function handleUpdateNumberOfContextLines(message, panel) {
   NUMBER_OF_COTEXT_LINES = message.value;
   lastCommitDate = "";
+  isLoadMore = false;
   await executeGitSearch(latestQuery, panel);
 }
 
