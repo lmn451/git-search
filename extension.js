@@ -7,9 +7,8 @@ const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
 const Convert = require("ansi-to-html");
-const { highlightQueryInHtml } = require("./src/customGrep");
-const sanitize = require("./src/sanitize");
 const { adjustDate, formatDate } = require("./src/helpers");
+const { highlightQueryInHtml, escapeHtml } = require("./src/htmlHelpers");
 
 const convert = new Convert({
   colors: [
@@ -174,8 +173,8 @@ async function executeGitSearch(dirtyQuery, panel) {
       if (!diff) return "";
       const { commitHash, diffOutput, commitDate, author } = diff;
       const highlightedDiff = highlightQueryInHtml(
-        sanitize(diffOutput),
-        sanitize(query)
+        escapeHtml(diffOutput),
+        escapeHtml(query)
       );
       const diffHtml = convert.toHtml(highlightedDiff);
       return `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author} at ${formatDate(

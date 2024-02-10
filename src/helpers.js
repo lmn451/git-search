@@ -39,7 +39,6 @@ module.exports = {
     } else {
       relativeTime = "just now";
     }
-
     return `${formattedDate} (approximately ${relativeTime})`;
   },
 

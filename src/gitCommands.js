@@ -49,5 +49,4 @@ module.exports = {
   getRepoUrl,
   getRelatedCommitsInfo,
   getRelatedDiffs,
-  executeCommand,
 };

@@ -4,7 +4,7 @@ const vscode = require("vscode");
 const child_process = require("child_process");
 const fs = require("fs");
 const extension = require("../../extension");
-const { executeCommand } = require("../../src/gitCommands");
+const { executeCommand } = require("../../src/helpers");
 
 describe("Git Search Extension Tests", () => {
   beforeEach(() => {
