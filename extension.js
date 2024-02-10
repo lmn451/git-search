@@ -185,7 +185,7 @@ async function executeGitSearch(dirtyQuery, panel) {
     let content = contentArray.join("");
     panel.webview.postMessage({
       command: isLoadMore ? "appendResults" : "showResults",
-      text: content ? `<ul>${content}</ul>` : "No results found",
+      text: content || "No results found",
       latestQuery,
       isLoadMore: contentArray ? contentArray.length == PAGE_SIZE : false,
     });

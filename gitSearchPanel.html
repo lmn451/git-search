@@ -189,13 +189,15 @@
         const message = event.data;
         switch (message.command) {
           case "showResults":
-            results.innerHTML = message.text || "No results found";
+            results.innerHTML = message.text
+              ? `<ol id='list'>${message.text}</ol>`
+              : "No results found";
             loadMoreBtn.style.display = message.isLoadMore ? "block" : "none";
             loadMoreBtn.innerHTML = "Load More";
             loadMoreBtn.disabled = false;
             break;
           case "appendResults":
-            results.innerHTML += message.text || "Nothing More";
+            list.innerHTML += message.text || "Nothing More";
             loadMoreBtn.style.display = message.text ? "block" : "none";
             loadMoreBtn.innerHTML = "Load More";
             loadMoreBtn.disabled = false;
