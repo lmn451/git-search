@@ -129,8 +129,6 @@ Changelog:
 
 ## Version 0.1.0
 
-Changelog:
-
 - Updated version in package.json from "0.0.23" to "0.1.0".
 
 ## Version 0.0.23
@@ -164,8 +162,6 @@ Changelog:
 - Updated extension version to 0.0.21.
 
 ## Version 0.0.20
-
-### Version 0.0.20
 
 #### README.md
 
@@ -417,8 +413,6 @@ Changelog:
 
 ## Version 0.0.4
 
-### Version 0.0.4
-
 - Renamed extension to "Git Search for VS Code 🚀"
 - Updated TL;DR and added emoji for better readability
 - Improved description and added emojis for sections like "What's This?" and "Why It Rocks"
@@ -431,8 +425,6 @@ Changelog:
 - Updated package version to 0.0.4 in package.json
 
 ## Version 0.0.3
-
-### Version 0.0.3
 
 #### README.md
 

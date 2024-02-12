@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <style>
+      html {
+        scroll-behavior: smooth;
+      }
       body {
         font-family: var(--vscode-editor-font-family);
         display: grid;
@@ -31,6 +34,7 @@
       button {
         background-color: var(--vscode-button-background);
         color: var(--vscode-button-foreground);
+        border: none;
       }
 
       button:hover {
@@ -117,6 +121,24 @@
       #loadMoreBtn {
         justify-self: flex-end;
       }
+
+      #goTopBtn {
+        position: fixed;
+        bottom: 60px;
+        right: 20px;
+        width: 36px;
+        height: 36px;
+        z-index: 1000;
+        padding: 8px;
+        border-radius: 50%;
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+      }
+
+      #goTopBtn:hover {
+        opacity: 1;
+      }
     </style>
     <title>Git Search</title>
   </head>
@@ -163,13 +185,31 @@
       </div>
     </header>
     <div id="results"></div>
+    <button id="goTopBtn" aria-label="Go to top" style="display: none">
+      ↑
+    </button>
     <footer>
       <button id="loadMoreBtn" style="display: none">Load More</button>
     </footer>
 
     <script>
-      // Mode logic
+      //Go to top button logic
+      results.addEventListener("scroll", () => {
+        if (results.scrollTop > 100) {
+          goTopBtn.style.display = "block";
+        } else {
+          goTopBtn.style.display = "none";
+        }
+      });
 
+      goTopBtn.addEventListener("click", () => {
+        results.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      });
+
+      // Mode logic
       modeG.addEventListener("change", (e) => {
         vscode.postMessage({
           command: "changeMode",
