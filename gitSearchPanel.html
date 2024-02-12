@@ -38,7 +38,7 @@
       }
 
       #searchQuery {
-        width: 40%;
+        width: 50%;
         padding: 8px;
         margin: 8px;
       }
@@ -82,14 +82,14 @@
       }
 
       .search-container {
-        justify-content: flex-start;
+        justify-content: space-between;
         display: flex;
-        gap: 8px;
+        gap: 16px;
       }
       .modeContainer {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 8px;
       }
       .searched-query {
         border: 1px solid blueviolet;
@@ -97,6 +97,25 @@
 
       #numberOfContextLines {
         width: 32px;
+      }
+
+      .search-handlers-container {
+        display: flex;
+        gap: 8px;
+        justify-content: space-between;
+      }
+
+      .search-settings {
+        display: flex;
+        gap: 8px;
+      }
+
+      footer {
+        display: grid;
+      }
+
+      #loadMoreBtn {
+        justify-self: flex-end;
       }
     </style>
     <title>Git Search</title>
@@ -110,25 +129,31 @@
           id="searchQuery"
           placeholder="Enter search query (regexp friendly when G mode is enabled)"
         />
-        <div
-          class="modeContainer"
-          title="'G mode' refers to git log -G, a broader search than the standard 'S mode'"
-        >
-          <input type="checkbox" id="modeG" name="modeG" />
-          <label for="modeG">G mode</label>
+        <div class="search-handlers-container">
+          <div class="search-settings">
+            <div
+              class="modeContainer"
+              title="'G mode' refers to git log -G, a broader search than the standard 'S mode'"
+            >
+              <input type="checkbox" id="modeG" name="modeG" />
+              <label for="modeG">G mode</label>
+            </div>
+            <div class="modeContainer" title="Change number of context lines ">
+              <input
+                type="number"
+                min="1"
+                value="1"
+                id="numberOfContextLines"
+                name="numberOfContextLines"
+              />
+              <label for="numberOfContextLines">Number of context lines</label>
+            </div>
+          </div>
+          <div class="button-containers">
+            <button id="searchBtn">Search</button>
+            <button id="resetBtn">Reset</button>
+          </div>
         </div>
-        <div class="modeContainer" title="Change number of context lines ">
-          <input
-            type="number"
-            min="1"
-            value="1"
-            id="numberOfContextLines"
-            name="numberOfContextLines"
-          />
-          <label for="numberOfContextLines">Number of context lines</label>
-        </div>
-        <button id="searchBtn">Search</button>
-        <button id="resetBtn">Reset</button>
       </div>
       <div id="findWidget" class="find-widget" style="display: none">
         <input type="text" id="findInput" placeholder="Find" />
