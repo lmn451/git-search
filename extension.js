@@ -193,7 +193,7 @@ async function executeGitSearch(dirtyQuery, panel) {
     vscode.window.showErrorMessage(error.stack);
     panel.webview.postMessage({
       command: "showResults",
-      text: `Error: ${error}`,
+      text: error,
     });
   }
 }

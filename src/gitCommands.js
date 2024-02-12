@@ -41,7 +41,7 @@ async function getRelatedDiffs(
   query,
   numberOfContextLines = 1
 ) {
-  const diffCommand = `git diff -U3 --color=always "${commitHash}^!" | grep --color=none -${numberOfContextLines} "${query}"`;
+  const diffCommand = `git diff -U0 --color=always "${commitHash}^!" | grep --color=none -${numberOfContextLines} ${query}`;
   return await executeCommand(diffCommand, workspaceFolderPath);
 }
 
