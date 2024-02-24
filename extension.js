@@ -1,6 +1,5 @@
 const {
   getRelatedCommitsInfo,
-  getRelatedDiffs,
   getDiff,
   getRepoUrl,
 } = require("./src/gitCommands");

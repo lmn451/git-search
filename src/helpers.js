@@ -76,11 +76,15 @@ module.exports = {
 
   executeCommand: function executeCommand(command, cwd) {
     return new Promise((resolve, reject) => {
-      exec(command, { cwd }, (error, stdout, stderr) => {
-        if (error) reject(error);
-        if (stderr) reject(new Error(stderr));
-        resolve(stdout);
-      });
+      exec(
+        command,
+        { cwd, maxBuffer: 1024 * 1024 * 10 },
+        (error, stdout, stderr) => {
+          if (error) reject(error);
+          if (stderr) reject(new Error(stderr));
+          resolve(stdout);
+        }
+      );
     });
   },
   Queue,
