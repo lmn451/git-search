@@ -1,4 +1,6 @@
-const { executeCommand } = require("./helpers");
+const { executeCommand, Queue, Cache } = require("./helpers");
+const escapedLineDiffStartsWith = "\u001b";
+const NUMBER_OF_DIFF_INFO_LINES = 4;
 
 async function getRepoUrl(workspaceFolderPath) {
   try {
@@ -35,18 +37,50 @@ async function getRelatedCommitsInfo(
   return await executeCommand(logCommand, workspaceFolderPath);
 }
 
-async function getRelatedDiffs(
+const cache = new Cache();
+
+async function getDiff(
   workspaceFolderPath,
   commitHash,
   query,
-  numberOfContextLines = 1
+  numberOfGrepContextLines = 3,
+  numberOfDiffContextLines = 3
 ) {
-  const diffCommand = `git diff --diff-algorithm=histogram -U0 --color=always "${commitHash}^!" | grep --color=none -${numberOfContextLines} ${query}`;
-  return await executeCommand(diffCommand, workspaceFolderPath);
+  const resultsLines = [];
+  let diff = cache.get(`${commitHash}_${numberOfDiffContextLines}`);
+  if (!diff) {
+    const diffCommand = `git diff  -U${numberOfDiffContextLines} --color=always '${commitHash}^!'`;
+    diff = await executeCommand(diffCommand, workspaceFolderPath);
+    cache.set(`${commitHash}_${numberOfDiffContextLines}`, diff);
+  }
+  const lines = diff.split("\n");
+  const contextLines = new Queue(numberOfGrepContextLines);
+  const fileInfoLines = new Queue(NUMBER_OF_DIFF_INFO_LINES);
+  for (const line of lines) {
+    //check if line is bold (meaning info line)
+    if (line.startsWith(`${escapedLineDiffStartsWith}[1`)) {
+      fileInfoLines.push(line);
+      contextLines.reset();
+      continue;
+    }
+    // check if line is diff (meaning diffed (added/removed) line) and includes query
+    if (
+      line.startsWith(`${escapedLineDiffStartsWith}[3`) &&
+      line.includes(query)
+    ) {
+      resultsLines.push(...fileInfoLines.get());
+      resultsLines.push(...contextLines.get());
+      resultsLines.push(line);
+      continue;
+    }
+    contextLines.push(line);
+  }
+  resultsLines.push(...contextLines.get());
+  return resultsLines.join("\n");
 }
 
 module.exports = {
   getRepoUrl,
   getRelatedCommitsInfo,
-  getRelatedDiffs,
+  getDiff,
 };

@@ -1,4 +1,36 @@
 const { exec } = require("child_process");
+
+class Queue {
+  constructor(maxLength) {
+    this.arr = [];
+    this.maxLength = maxLength;
+  }
+  push(line) {
+    if (this.maxLength === this.arr.length) this.arr.shift();
+    this.arr.push(line);
+  }
+  reset() {
+    this.arr = [];
+  }
+  get() {
+    const res = this.arr;
+    this.reset();
+    return res;
+  }
+}
+
+class Cache {
+  constructor() {
+    this.map = new Map();
+  }
+  get(key) {
+    return this.map.get(key);
+  }
+  set(key, value) {
+    return this.map.set(key, value);
+  }
+}
+
 module.exports = {
   adjustDate: (dateStr) => {
     try {
@@ -51,4 +83,6 @@ module.exports = {
       });
     });
   },
+  Queue,
+  Cache,
 };

@@ -1,6 +1,7 @@
 const {
   getRelatedCommitsInfo,
   getRelatedDiffs,
+  getDiff,
   getRepoUrl,
 } = require("./src/gitCommands");
 const vscode = require("vscode");
@@ -155,7 +156,7 @@ async function executeGitSearch(dirtyQuery, panel) {
 
     const diffPromises = commits.map((commitEntry) => {
       const [commitHash, author, commitDate] = commitEntry.split("|");
-      return getRelatedDiffs(
+      return getDiff(
         workspaceFolderPath,
         commitHash,
         query,

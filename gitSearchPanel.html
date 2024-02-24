@@ -221,7 +221,7 @@
       numberOfContextLines.addEventListener("change", (e) => {
         vscode.postMessage({
           command: "updateNumberOfContextLines",
-          value: e.target.value,
+          value: Number(e.target.value),
         });
       });
 
