@@ -25,6 +25,8 @@ let NUMBER_OF_CONTEXT_LINES = 3;
 let latestQuery = "";
 let isLoadMore = false;
 let lastCommitDate = "";
+let currentCommits = [];
+let redraw = false;
 
 const getWorkspace = () => {
   try {
@@ -35,9 +37,8 @@ const getWorkspace = () => {
 };
 
 function activate(context) {
-  let disposable = vscode.commands.registerCommand(
-    "git-search.showPanel",
-    showPanel.bind(null, context)
+  let disposable = vscode.commands.registerCommand("git-search.showPanel", () =>
+    showPanel(context)
   );
 
   context.subscriptions.push(disposable);
@@ -75,17 +76,22 @@ function handleWebviewMessage(message, panel) {
       break;
     case "updateNumberOfContextLines":
       handleUpdateNumberOfContextLines(message, panel);
+      break;
   }
 }
 
 async function handleUpdateNumberOfContextLines(message, panel) {
   NUMBER_OF_CONTEXT_LINES = message.value;
   lastCommitDate = "";
+  redraw = true;
   isLoadMore = false;
   await executeGitSearch(latestQuery, panel);
 }
 
 async function handleSearchCommand(query, panel) {
+  if (query !== latestQuery) {
+    currentCommits = [];
+  }
   latestQuery = query;
   isLoadMore = false;
   lastCommitDate = "";
@@ -95,6 +101,7 @@ async function handleSearchCommand(query, panel) {
 
 async function handleLoadMoreCommand(panel) {
   isLoadMore = true;
+  redraw = true;
   await executeGitSearch(latestQuery, panel);
 }
 
@@ -102,6 +109,7 @@ function handleResetCommand(panel) {
   latestQuery = "";
   isLoadMore = false;
   lastCommitDate = "";
+  currentCommits = [];
   panel.webview.postMessage({ command: "reset", text: "" });
 }
 
@@ -115,14 +123,15 @@ function getWebviewContent() {
   return fs.readFileSync(htmlFilePath, "utf8");
 }
 
-async function executeGitSearch(dirtyQuery, panel) {
-  const query = dirtyQuery.trim();
+async function executeGitSearch(rawQuery, panel) {
+  const query = rawQuery.trim();
   if (!query) {
     return panel.webview.postMessage({
       command: "showResults",
       text: "",
     });
   }
+
   try {
     const workspaceFolderPath = getWorkspace();
     if (!workspaceFolderPath)
@@ -130,30 +139,33 @@ async function executeGitSearch(dirtyQuery, panel) {
         command: "showResults",
         text: `No workspace found`,
       });
-
     const repoUrl = await getRepoUrl(workspaceFolderPath);
-    const logOutput = await getRelatedCommitsInfo(
-      workspaceFolderPath,
-      query,
-      MODE,
-      lastCommitDate,
-      PAGE_SIZE
-    );
-    if (!logOutput)
-      return panel.webview.postMessage({
-        command: isLoadMore ? "appendResults" : "showResults",
-        text: null,
-        isLoadMore: false,
-      });
 
-    const commits = logOutput
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
+    if (!redraw || isLoadMore) {
+      const logOutput = await getRelatedCommitsInfo(
+        workspaceFolderPath,
+        query,
+        MODE,
+        lastCommitDate,
+        PAGE_SIZE
+      );
+      if (!logOutput)
+        return panel.webview.postMessage({
+          command: isLoadMore ? "appendResults" : "showResults",
+          text: null,
+          isLoadMore: false,
+        });
 
-    lastCommitDate = adjustDate(commits.at(-1).split("|")[2]);
+      const commits = logOutput
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
 
-    const diffPromises = commits.map((commitEntry) => {
+      currentCommits.push(...commits);
+      lastCommitDate = adjustDate(commits.at(-1).split("|")[2]);
+    }
+
+    const diffPromises = currentCommits.map((commitEntry) => {
       const [commitHash, author, commitDate] = commitEntry.split("|");
       return getDiff(
         workspaceFolderPath,
@@ -184,7 +196,11 @@ async function executeGitSearch(dirtyQuery, panel) {
 
     let content = contentArray.join("");
     panel.webview.postMessage({
-      command: isLoadMore ? "appendResults" : "showResults",
+      command: redraw
+        ? "showResults"
+        : isLoadMore
+        ? "appendResults"
+        : "showResults",
       text: content || "No results found",
       latestQuery,
       isLoadMore: contentArray ? contentArray.length == PAGE_SIZE : false,
