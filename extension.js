@@ -21,7 +21,7 @@ const convert = new Convert({
 
 let PAGE_SIZE = 10;
 let MODE = "S";
-let NUMBER_OF_COTEXT_LINES = 1;
+let NUMBER_OF_CONTEXT_LINES = 3;
 let latestQuery = "";
 let isLoadMore = false;
 let lastCommitDate = "";
@@ -79,7 +79,7 @@ function handleWebviewMessage(message, panel) {
 }
 
 async function handleUpdateNumberOfContextLines(message, panel) {
-  NUMBER_OF_COTEXT_LINES = message.value;
+  NUMBER_OF_CONTEXT_LINES = message.value;
   lastCommitDate = "";
   isLoadMore = false;
   await executeGitSearch(latestQuery, panel);
@@ -159,7 +159,7 @@ async function executeGitSearch(dirtyQuery, panel) {
         workspaceFolderPath,
         commitHash,
         query,
-        NUMBER_OF_COTEXT_LINES
+        NUMBER_OF_CONTEXT_LINES
       )
         .then((diffOutput) => ({ commitHash, diffOutput, commitDate, author }))
         .catch((error) => {
