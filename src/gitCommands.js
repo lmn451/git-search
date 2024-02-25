@@ -49,7 +49,7 @@ async function getDiff(
   const resultsLines = [];
   let diff = cache.get(`${commitHash}_${numberOfDiffContextLines}`);
   if (!diff) {
-    const diffCommand = `git diff  -U${numberOfDiffContextLines} --color=always ${commitHash}^!`;
+    const diffCommand = `git diff  -U${numberOfDiffContextLines} --color=always "${commitHash}^!"`;
     diff = await executeCommand(diffCommand, workspaceFolderPath);
     cache.set(`${commitHash}_${numberOfDiffContextLines}`, diff);
   }
