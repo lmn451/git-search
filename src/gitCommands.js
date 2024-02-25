@@ -49,7 +49,7 @@ async function getDiff(
   const resultsLines = [];
   let diff = cache.get(`${commitHash}_${numberOfDiffContextLines}`);
   if (!diff) {
-    const diffCommand = `git diff  -U${numberOfDiffContextLines} --color=always '${commitHash}^!'`;
+    const diffCommand = `git diff  -U${numberOfDiffContextLines} --color=always ${commitHash}^!`;
     diff = await executeCommand(diffCommand, workspaceFolderPath);
     cache.set(`${commitHash}_${numberOfDiffContextLines}`, diff);
   }
@@ -63,7 +63,7 @@ async function getDiff(
       contextLines.reset();
       continue;
     }
-    // check if line is diff (meaning diffed (added/removed) line) and includes query
+    // check if line is diff (meaning diffed (added/removed) line) and includes query)
     if (
       line.startsWith(`${escapedLineDiffStartsWith}[3`) &&
       line.includes(query)
