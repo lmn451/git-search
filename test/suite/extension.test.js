@@ -74,8 +74,9 @@ describe("Git Search Extension Tests", () => {
   });
 
   it("should load HTML content for Webview", () => {
-    fs.readFileSync.returns("<html>Mock Content</html>");
+    const htmlString = "<html>Mock Content</html>";
+    fs.readFileSync.returns(htmlString);
     const content = extension.getWebviewContent();
-    assert.ok(content.includes("<html>"));
+    assert.ok(content.includes(htmlString));
   });
 });

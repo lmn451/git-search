@@ -2,18 +2,27 @@ const { exec } = require("child_process");
 
 class Queue {
   constructor(maxLength) {
-    this.arr = [];
+    this.arr = new Array(maxLength);
     this.maxLength = maxLength;
+    this.head = 0;
+    this.tail = 0;
   }
   push(line) {
-    if (this.maxLength === this.arr.length) this.arr.shift();
-    this.arr.push(line);
+    this.arr[this.tail] = line;
+    this.tail = (this.tail + 1) % this.maxLength;
+    if (this.tail === this.head) this.head = (this.head + 1) % this.maxLength;
   }
   reset() {
-    this.arr = [];
+    this.head = 0;
+    this.tail = 0;
   }
   get() {
-    const res = this.arr;
+    const res = [];
+    let idx = this.head;
+    while (idx !== this.tail) {
+      res.push(this.arr[idx]);
+      idx = (idx + 1) % this.maxLength;
+    }
     this.reset();
     return res;
   }
@@ -27,7 +36,7 @@ class Cache {
     return this.map.get(key);
   }
   set(key, value) {
-    return this.map.set(key, value);
+    this.map.set(key, value);
   }
 }
 
@@ -83,7 +92,7 @@ module.exports = {
           if (error) reject(error);
           if (stderr) reject(new Error(stderr));
           resolve(stdout);
-        }
+        },
       );
     });
   },

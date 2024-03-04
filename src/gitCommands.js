@@ -1,6 +1,8 @@
 const { executeCommand, Queue, Cache } = require("./helpers");
 const escapedLineDiffStartsWith = "\u001b";
 const NUMBER_OF_DIFF_INFO_LINES = 4;
+const boldDiff = `${escapedLineDiffStartsWith}[1`;
+const changedDiff = `${escapedLineDiffStartsWith}[3`;
 
 async function getRepoUrl(workspaceFolderPath) {
   try {
@@ -58,16 +60,13 @@ async function getDiff(
   const fileInfoLines = new Queue(NUMBER_OF_DIFF_INFO_LINES);
   for (const line of lines) {
     //check if line is bold (meaning info line)
-    if (line.startsWith(`${escapedLineDiffStartsWith}[1`)) {
+    if (line.startsWith(boldDiff)) {
       fileInfoLines.push(line);
       contextLines.reset();
       continue;
     }
     // check if line is diff (meaning diffed (added/removed) line) and includes query)
-    if (
-      line.startsWith(`${escapedLineDiffStartsWith}[3`) &&
-      line.includes(query)
-    ) {
+    if (line.startsWith(changedDiff) && line.includes(query)) {
       resultsLines.push(...fileInfoLines.get());
       resultsLines.push(...contextLines.get());
       resultsLines.push(line);
