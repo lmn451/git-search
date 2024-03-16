@@ -88,6 +88,11 @@ async function getDiff(
     diff = await executeCommand(diffCommand, workspaceFolderPath);
     cache.set(diffCacheKey, diff);
   }
+
+  return parseDiffToMap(diff, commitHash, query, numberOfGrepContextLines);
+}
+
+const parseDiffToMap = (diff, commitHash, query, numberOfGrepContextLines) => {
   const lines = diff.split("\n");
   const contextLines = new Queue(numberOfGrepContextLines);
   const fileInfoLines = new Queue(NUMBER_OF_DIFF_INFO_LINES);
@@ -122,12 +127,22 @@ async function getDiff(
     contextLines.push(line);
   }
   results[commitHash][currentFileName].push(...contextLines.get());
-  console.log(results);
   return results;
+};
+
+async function getFullDiff(
+  workspaceFolderPath,
+  commitHash,
+  filename,
+  numberOfDiffContextLines
+) {
+  const diffCommand = `git diff -U${numberOfDiffContextLines} --color=always "${commitHash}^!" -- ${filename}`;
+  return await executeCommand(diffCommand, workspaceFolderPath);
 }
 
 module.exports = {
   getRepoUrl,
   getRelatedCommitsInfo,
   getDiff,
+  getFullDiff,
 };

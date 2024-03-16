@@ -162,6 +162,17 @@
       details summary {
         padding: 8px;
       }
+      dialog {
+        background-color: var(--vscode-editor-background);
+        max-width: 85vw;
+        max-height: 85vh;
+        color: var(--vscode-editor-foreground);
+      }
+      #dialog-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
     </style>
     <title>Git Search</title>
   </head>
@@ -214,8 +225,31 @@
     <footer>
       <button id="loadMoreBtn" style="display: none">Load More</button>
     </footer>
+    <dialog id="dialog">
+      <div id="dialog-content">
+        <div id="dialog-header">
+          <h1 id="dialogTitle">Full Diff</h1>
+          <button id="dialogCloseBtn">Close</button>
+        </div>
+        <div id="dialog-body">
+          <p>Dialog body content</p>
+        </div>
+      </div>
+    </dialog>
 
     <script>
+      function q(commitHash, filename) {
+        vscode.postMessage({
+          command: "getFullDiff",
+          commitHash,
+          filename,
+        });
+      }
+      window.q = q;
+      // show full diff for specific file in commit
+      dialogCloseBtn.addEventListener("click", () => {
+        dialog.close();
+      });
       //Go to top button logic
       results.addEventListener("scroll", () => {
         if (results.scrollTop > 100) {
@@ -249,6 +283,8 @@
 
       //Search Logic
       const vscode = acquireVsCodeApi();
+
+      window.vscode = vscode;
 
       function ifEnterSearch(e) {
         e.key === "Enter" &&
@@ -297,6 +333,12 @@
             matchCount.innerHTML = "";
             loadMoreBtn.innerHTML = "Load More";
             loadMoreBtn.disabled = false;
+            break;
+          case "showDialog":
+            dialog.showModal();
+            const dialogContent = document.getElementById("dialog-body");
+            dialogContent.innerHTML = message.text;
+            dialogTitle.innerHTML = "Full Diff for " + message.title;
             break;
         }
       });

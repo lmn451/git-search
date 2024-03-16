@@ -2,6 +2,7 @@ const {
   getRelatedCommitsInfo,
   getDiff,
   getRepoUrl,
+  getFullDiff,
 } = require("./src/gitCommands");
 const vscode = require("vscode");
 const fs = require("fs");
@@ -77,7 +78,26 @@ function handleWebviewMessage(message, panel) {
     case "updateNumberOfContextLines":
       handleUpdateNumberOfContextLines(message, panel);
       break;
+    case "getFullDiff":
+      handleGetFullDiff(message, panel);
+      break;
   }
+}
+
+async function handleGetFullDiff(message, panel) {
+  const diff = await getFullDiff(
+    getWorkspace(),
+    message.commitHash,
+    message.filename,
+    NUMBER_OF_CONTEXT_LINES
+  );
+  panel.webview.postMessage({
+    command: "showDialog",
+    text: `<pre>${convert.toHtml(
+      highlightQueryInHtml(escapeHtml(diff), escapeHtml(latestQuery))
+    )}</pre>`,
+    title: message.commitHash,
+  });
 }
 
 async function handleUpdateNumberOfContextLines(message, panel) {
@@ -199,8 +219,8 @@ async function executeGitSearch(rawQuery, panel) {
         ${Object.entries(diffOutput[commitHash])
           .map(
             ([filename, diff]) =>
-              `<details>
-              <summary>${filename}</summary>
+              `<details id='${commitHash}|${filename}'>
+              <summary>${filename}  <button id="dialogBtn" onclick="window.q('${commitHash}', '${filename}')">Show Full Diff</button></summary>
               <pre>${convert.toHtml(
                 highlightQueryInHtml(
                   escapeHtml(diff.join("\n")),
