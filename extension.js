@@ -166,14 +166,21 @@ async function executeGitSearch(rawQuery, panel) {
     }
 
     const diffPromises = currentCommits.map((commitEntry) => {
-      const [commitHash, author, commitDate] = commitEntry.split("|");
+      const [commitHash, author, commitDate, commitMessage] =
+        commitEntry.split("|");
       return getDiff(
         workspaceFolderPath,
         commitHash,
         query,
         NUMBER_OF_CONTEXT_LINES
       )
-        .then((diffOutput) => ({ commitHash, diffOutput, commitDate, author }))
+        .then((diffOutput) => ({
+          commitHash,
+          diffOutput,
+          commitDate,
+          author,
+          commitMessage,
+        }))
         .catch((error) => {
           vscode.window.showErrorMessage(error.stack);
           return null; // Continue processing other commits
@@ -183,15 +190,27 @@ async function executeGitSearch(rawQuery, panel) {
     const diffResults = await Promise.all(diffPromises);
     const contentArray = diffResults.map((diff) => {
       if (!diff) return "";
-      const { commitHash, diffOutput, commitDate, author } = diff;
-      const highlightedDiff = highlightQueryInHtml(
-        escapeHtml(diffOutput),
-        escapeHtml(query)
-      );
-      const diffHtml = convert.toHtml(highlightedDiff);
-      return `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author} at ${formatDate(
-        commitDate
-      )}<br><pre>${diffHtml}</pre></li>`;
+      const { commitHash, diffOutput, commitDate, author, commitMessage } =
+        diff;
+
+      return `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>
+        ${commitMessage}
+        </a> by ${author} at ${formatDate(commitDate)}
+        ${Object.entries(diffOutput[commitHash])
+          .map(
+            ([filename, diff]) =>
+              `<details>
+              <summary>${filename}</summary>
+              <pre>${convert.toHtml(
+                highlightQueryInHtml(
+                  escapeHtml(diff.join("\n")),
+                  escapeHtml(query)
+                )
+              )}</pre>
+          </details>`
+          )
+          .join("")}
+        </li>`;
     });
 
     let content = contentArray.join("");
