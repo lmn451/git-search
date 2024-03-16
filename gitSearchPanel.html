@@ -6,15 +6,19 @@
       html {
         scroll-behavior: smooth;
       }
+
       body {
         font-family: var(--vscode-editor-font-family);
         display: grid;
         grid-template-rows: auto 1fr auto;
         height: 100vh;
       }
+
       pre {
         font-family: var(--vscode-editor-font-family);
+        padding: 0 8px;
       }
+
       header {
         height: 75px;
       }
@@ -92,11 +96,13 @@
         display: flex;
         gap: 16px;
       }
+
       .modeContainer {
         display: flex;
         align-items: center;
         gap: 8px;
       }
+
       .searched-query {
         border: 1px solid blueviolet;
       }
@@ -141,6 +147,20 @@
 
       #goTopBtn:hover {
         opacity: 1;
+      }
+
+      .commit-diff {
+        margin-bottom: 16px;
+      }
+
+      details {
+        margin: 8px 0;
+        border: 1px solid;
+        border-radius: 16px;
+      }
+
+      details summary {
+        padding: 8px;
       }
     </style>
     <title>Git Search</title>
