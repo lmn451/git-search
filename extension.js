@@ -96,7 +96,7 @@ async function handleGetFullDiff(message, panel) {
     text: `<pre>${convert.toHtml(
       highlightQueryInHtml(escapeHtml(diff), escapeHtml(latestQuery))
     )}</pre>`,
-    title: message.commitHash,
+    title: "Full Diff for " + message.commitHash,
   });
 }
 
@@ -213,7 +213,7 @@ async function executeGitSearch(rawQuery, panel) {
       const { commitHash, diffOutput, commitDate, author, commitMessage } =
         diff;
 
-      return `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>
+      return `<li class="commit-diff">Commit: <a title="${commitHash}" href=${repoUrl}/commit/${commitHash}>
         ${commitMessage}
         </a> by ${author} at ${formatDate(commitDate)}
         ${Object.entries(diffOutput[commitHash])

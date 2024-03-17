@@ -67,7 +67,6 @@ const getFileNameFromGitInfoLines = (...diffInfoLines) => {
       }
     }
   }
-
   return filename;
 };
 
@@ -76,7 +75,7 @@ async function getDiff(
   commitHash,
   query,
   numberOfGrepContextLines = 3,
-  numberOfDiffContextLines = 3
+  numberOfDiffContextLines = 1
 ) {
   const diffCacheKey = `${commitHash}_${numberOfDiffContextLines}`;
   if (!results[commitHash]) {
@@ -117,8 +116,9 @@ const parseDiffToMap = (diff, commitHash, query, numberOfGrepContextLines) => {
         results[commitHash][currentFileName] = [];
       }
       //we have a diff lines and we want to add here more context lines
+      // handle antoher case where line is not diffed
       if (results[commitHash][currentFileName][0]) {
-        results[commitHash][currentFileName] = [];
+        results[commitHash][currentFileName].push("=======");
       }
       results[commitHash][currentFileName].push(...contextLines.get());
       results[commitHash][currentFileName].push(line);

@@ -168,10 +168,21 @@
         max-height: 85vh;
         color: var(--vscode-editor-foreground);
       }
+      dialog::backdrop {
+        background-color: rgba(0, 0, 0, 0.5);
+      }
       #dialog-header {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
+        position: sticky;
+      }
+      #dialog-body {
+        overflow: auto;
+        max-height: 70vh;
+      }
+      #dialogTitle {
+        font-size: 22px;
       }
     </style>
     <title>Git Search</title>
@@ -228,7 +239,7 @@
     <dialog id="dialog">
       <div id="dialog-content">
         <div id="dialog-header">
-          <h1 id="dialogTitle">Full Diff</h1>
+          <span id="dialogTitle">Full Diff</span>
           <button id="dialogCloseBtn">Close</button>
         </div>
         <div id="dialog-body">
@@ -338,7 +349,7 @@
             dialog.showModal();
             const dialogContent = document.getElementById("dialog-body");
             dialogContent.innerHTML = message.text;
-            dialogTitle.innerHTML = "Full Diff for " + message.title;
+            dialogTitle.innerHTML = message.title;
             break;
         }
       });
