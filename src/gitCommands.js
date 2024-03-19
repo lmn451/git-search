@@ -1,4 +1,5 @@
 const { executeCommand, Queue, Cache } = require("./helpers");
+const { gitDelimiter } = require("./consts");
 const escapedLineDiffStartsWith = "\u001b";
 const NUMBER_OF_DIFF_INFO_LINES = 4;
 const boldDiff = `${escapedLineDiffStartsWith}[1`;
@@ -8,7 +9,7 @@ async function getRepoUrl(workspaceFolderPath) {
   try {
     const repoUrl = await executeCommand(
       "git config --get remote.origin.url",
-      workspaceFolderPath
+      workspaceFolderPath,
     );
     // Remove .git from the end if present
     // Convert SSH and Git protocol URLs to HTTPS format
@@ -31,9 +32,9 @@ async function getRelatedCommitsInfo(
   query,
   MODE,
   lastCommitDate,
-  PAGE_SIZE
+  PAGE_SIZE,
 ) {
-  const logCommand = `git log --pretty=format:"%H|%an|%cd|%s" -${MODE}"${query}" ${
+  const logCommand = `git log --pretty=format:"%H${gitDelimiter}%an${gitDelimiter}%cd${gitDelimiter}%s" -${MODE}"${query}" ${
     lastCommitDate ? `--before="${lastCommitDate}"` : ""
   } -n ${PAGE_SIZE}`;
   return await executeCommand(logCommand, workspaceFolderPath);
@@ -75,7 +76,7 @@ async function getDiff(
   commitHash,
   query,
   numberOfGrepContextLines = 3,
-  numberOfDiffContextLines = 1
+  numberOfDiffContextLines = 3,
 ) {
   const diffCacheKey = `${commitHash}_${numberOfDiffContextLines}`;
   if (!results[commitHash]) {
@@ -134,7 +135,7 @@ async function getFullDiff(
   workspaceFolderPath,
   commitHash,
   filename,
-  numberOfDiffContextLines
+  numberOfDiffContextLines,
 ) {
   const diffCommand = `git diff -U${numberOfDiffContextLines} --color=always "${commitHash}^!" -- ${filename}`;
   return await executeCommand(diffCommand, workspaceFolderPath);
