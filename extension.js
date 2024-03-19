@@ -2,6 +2,7 @@ const {
   getRelatedCommitsInfo,
   getDiff,
   getRepoUrl,
+  getFullDiff,
 } = require("./src/gitCommands");
 const vscode = require("vscode");
 const fs = require("fs");
@@ -9,6 +10,7 @@ const path = require("path");
 const Convert = require("ansi-to-html");
 const { adjustDate, formatDate } = require("./src/helpers");
 const { highlightQueryInHtml, escapeHtml } = require("./src/htmlHelpers");
+const { gitDelimiter } = require("./src/consts");
 
 const convert = new Convert({
   colors: [
@@ -38,7 +40,7 @@ const getWorkspace = () => {
 
 function activate(context) {
   let disposable = vscode.commands.registerCommand("git-search.showPanel", () =>
-    showPanel(context)
+    showPanel(context),
   );
 
   context.subscriptions.push(disposable);
@@ -49,14 +51,14 @@ function showPanel(context) {
     "gitSearch",
     "Git Search",
     vscode.ViewColumn.One,
-    { enableScripts: true }
+    { enableScripts: true },
   );
 
   panel.webview.html = getWebviewContent();
   panel.webview.onDidReceiveMessage(
     (message) => handleWebviewMessage(message, panel),
     undefined,
-    context.subscriptions
+    context.subscriptions,
   );
 }
 
@@ -77,7 +79,26 @@ function handleWebviewMessage(message, panel) {
     case "updateNumberOfContextLines":
       handleUpdateNumberOfContextLines(message, panel);
       break;
+    case "getFullDiff":
+      handleGetFullDiff(message, panel);
+      break;
   }
+}
+
+async function handleGetFullDiff(message, panel) {
+  const diff = await getFullDiff(
+    getWorkspace(),
+    message.commitHash,
+    message.filename,
+    NUMBER_OF_CONTEXT_LINES,
+  );
+  panel.webview.postMessage({
+    command: "showDialog",
+    text: `<pre>${convert.toHtml(
+      highlightQueryInHtml(escapeHtml(diff), escapeHtml(latestQuery)),
+    )}</pre>`,
+    title: "Full Diff for " + message.commitHash,
+  });
 }
 
 async function handleUpdateNumberOfContextLines(message, panel) {
@@ -147,7 +168,7 @@ async function executeGitSearch(rawQuery, panel) {
         query,
         MODE,
         lastCommitDate,
-        PAGE_SIZE
+        PAGE_SIZE,
       );
       if (!logOutput)
         return panel.webview.postMessage({
@@ -162,18 +183,25 @@ async function executeGitSearch(rawQuery, panel) {
         .filter(Boolean);
 
       currentCommits.push(...commits);
-      lastCommitDate = adjustDate(commits.at(-1).split("|")[2]);
+      lastCommitDate = adjustDate(commits.at(-1).split(gitDelimiter)[2]);
     }
 
     const diffPromises = currentCommits.map((commitEntry) => {
-      const [commitHash, author, commitDate] = commitEntry.split("|");
+      const [commitHash, author, commitDate, commitMessage] =
+        commitEntry.split(gitDelimiter);
       return getDiff(
         workspaceFolderPath,
         commitHash,
         query,
-        NUMBER_OF_CONTEXT_LINES
+        NUMBER_OF_CONTEXT_LINES,
       )
-        .then((diffOutput) => ({ commitHash, diffOutput, commitDate, author }))
+        .then((diffOutput) => ({
+          commitHash,
+          diffOutput,
+          commitDate,
+          author,
+          commitMessage,
+        }))
         .catch((error) => {
           vscode.window.showErrorMessage(error.stack);
           return null; // Continue processing other commits
@@ -183,15 +211,27 @@ async function executeGitSearch(rawQuery, panel) {
     const diffResults = await Promise.all(diffPromises);
     const contentArray = diffResults.map((diff) => {
       if (!diff) return "";
-      const { commitHash, diffOutput, commitDate, author } = diff;
-      const highlightedDiff = highlightQueryInHtml(
-        escapeHtml(diffOutput),
-        escapeHtml(query)
-      );
-      const diffHtml = convert.toHtml(highlightedDiff);
-      return `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author} at ${formatDate(
-        commitDate
-      )}<br><pre>${diffHtml}</pre></li>`;
+      const { commitHash, diffOutput, commitDate, author, commitMessage } =
+        diff;
+
+      return `<li class="commit-diff">Commit: <a title="${commitHash}" href=${repoUrl}/commit/${commitHash}>
+        ${commitMessage}
+        </a> by ${author} at ${formatDate(commitDate)}
+        ${Object.entries(diffOutput[commitHash])
+          .map(
+            ([filename, diff]) =>
+              `<details id='${commitHash}|${filename}'>
+              <summary>${filename}  <button id="dialogBtn" onclick="window.q('${commitHash}', '${filename}')">Show Full Diff</button></summary>
+              <pre>${convert.toHtml(
+                highlightQueryInHtml(
+                  escapeHtml(diff.join("\n")),
+                  escapeHtml(query),
+                ),
+              )}</pre>
+          </details>`,
+          )
+          .join("")}
+        </li>`;
     });
 
     let content = contentArray.join("");
@@ -199,8 +239,8 @@ async function executeGitSearch(rawQuery, panel) {
       command: redraw
         ? "showResults"
         : isLoadMore
-        ? "appendResults"
-        : "showResults",
+          ? "appendResults"
+          : "showResults",
       text: content || "No results found",
       latestQuery,
       isLoadMore: contentArray ? contentArray.length == PAGE_SIZE : false,

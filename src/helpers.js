@@ -92,7 +92,7 @@ module.exports = {
           if (error) reject(error);
           if (stderr) reject(new Error(stderr));
           resolve(stdout);
-        },
+        }
       );
     });
   },

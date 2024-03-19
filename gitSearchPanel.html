@@ -6,15 +6,19 @@
       html {
         scroll-behavior: smooth;
       }
+
       body {
         font-family: var(--vscode-editor-font-family);
         display: grid;
         grid-template-rows: auto 1fr auto;
         height: 100vh;
       }
+
       pre {
         font-family: var(--vscode-editor-font-family);
+        padding: 0 8px;
       }
+
       header {
         height: 75px;
       }
@@ -92,11 +96,13 @@
         display: flex;
         gap: 16px;
       }
+
       .modeContainer {
         display: flex;
         align-items: center;
         gap: 8px;
       }
+
       .searched-query {
         border: 1px solid blueviolet;
       }
@@ -141,6 +147,42 @@
 
       #goTopBtn:hover {
         opacity: 1;
+      }
+
+      .commit-diff {
+        margin-bottom: 16px;
+      }
+
+      details {
+        margin: 8px 0;
+        border: 1px solid;
+        border-radius: 16px;
+      }
+
+      details summary {
+        padding: 8px;
+      }
+      dialog {
+        background-color: var(--vscode-editor-background);
+        max-width: 85vw;
+        max-height: 85vh;
+        color: var(--vscode-editor-foreground);
+      }
+      dialog::backdrop {
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+      #dialog-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        position: sticky;
+      }
+      #dialog-body {
+        overflow: auto;
+        max-height: 70vh;
+      }
+      #dialogTitle {
+        font-size: 22px;
       }
     </style>
     <title>Git Search</title>
@@ -194,8 +236,31 @@
     <footer>
       <button id="loadMoreBtn" style="display: none">Load More</button>
     </footer>
+    <dialog id="dialog">
+      <div id="dialog-content">
+        <div id="dialog-header">
+          <span id="dialogTitle">Full Diff</span>
+          <button id="dialogCloseBtn">Close</button>
+        </div>
+        <div id="dialog-body">
+          <p>Dialog body content</p>
+        </div>
+      </div>
+    </dialog>
 
     <script>
+      function q(commitHash, filename) {
+        vscode.postMessage({
+          command: "getFullDiff",
+          commitHash,
+          filename,
+        });
+      }
+      window.q = q;
+      // show full diff for specific file in commit
+      dialogCloseBtn.addEventListener("click", () => {
+        dialog.close();
+      });
       //Go to top button logic
       results.addEventListener("scroll", () => {
         if (results.scrollTop > 100) {
@@ -229,6 +294,8 @@
 
       //Search Logic
       const vscode = acquireVsCodeApi();
+
+      window.vscode = vscode;
 
       function ifEnterSearch(e) {
         e.key === "Enter" &&
@@ -277,6 +344,12 @@
             matchCount.innerHTML = "";
             loadMoreBtn.innerHTML = "Load More";
             loadMoreBtn.disabled = false;
+            break;
+          case "showDialog":
+            dialog.showModal();
+            const dialogContent = document.getElementById("dialog-body");
+            dialogContent.innerHTML = message.text;
+            dialogTitle.innerHTML = message.title;
             break;
         }
       });
