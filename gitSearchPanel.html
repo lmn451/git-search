@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -373,11 +373,11 @@
       let currentFindIndex = -1;
 
       findInput.addEventListener("input", () =>
-        searchAndHighlight(findInput.value)
+        searchAndHighlight(findInput.value),
       );
       findInput.addEventListener(
         "keydown",
-        (e) => e.key === "Enter" && navigateFind("next")
+        (e) => e.key === "Enter" && navigateFind("next"),
       );
       findPrev.addEventListener("click", () => navigateFind("prev"));
       findNext.addEventListener("click", () => navigateFind("next"));
@@ -413,7 +413,7 @@
             match;
           while ((match = regex.exec(text)) !== null) {
             docFrag.appendChild(
-              document.createTextNode(text.substring(startIndex, match.index))
+              document.createTextNode(text.substring(startIndex, match.index)),
             );
 
             const highlightSpan = document.createElement("span");
@@ -425,7 +425,7 @@
             startIndex = match.index + match[0].length;
           }
           docFrag.appendChild(
-            document.createTextNode(text.substring(startIndex))
+            document.createTextNode(text.substring(startIndex)),
           );
 
           if (startIndex > 0) {
@@ -433,7 +433,7 @@
           }
         } else if (node.nodeType === Node.ELEMENT_NODE) {
           Array.from(node.childNodes).forEach((child) =>
-            processNode(child, regex)
+            processNode(child, regex),
           );
         }
       }

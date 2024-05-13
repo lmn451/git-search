@@ -98,6 +98,7 @@ const parseDiffToMap = (diff, commitHash, query, numberOfGrepContextLines) => {
   const fileInfoLines = new Queue(NUMBER_OF_DIFF_INFO_LINES);
   let prevLineWasInfoLine = false;
   let currentFileName = "";
+  let currentHunk = 0;
   for (const line of lines) {
     //check if line is bold (meaning info line)
     if (line.startsWith(boldDiff)) {
@@ -111,23 +112,31 @@ const parseDiffToMap = (diff, commitHash, query, numberOfGrepContextLines) => {
       if (prevLineWasInfoLine) {
         currentFileName = getFileNameFromGitInfoLines(...fileInfoLines.get());
         prevLineWasInfoLine = false;
+        currentHunk = 0;
       }
       //we dont have a diff lines yet for this file
       if (!results[commitHash][currentFileName]) {
         results[commitHash][currentFileName] = [];
       }
-      //we have a diff lines and we want to add here more context lines
+      // we have a diff lines and we want to add here more context lines
       // handle antoher case where line is not diffed
-      if (results[commitHash][currentFileName][0]) {
-        results[commitHash][currentFileName].push("=======");
+      if (results[commitHash][currentFileName]) {
+        results[commitHash][currentFileName][currentHunk] = [];
       }
-      results[commitHash][currentFileName].push(...contextLines.get());
-      results[commitHash][currentFileName].push(line);
+      results[commitHash][currentFileName][currentHunk].push(
+        ...contextLines.get(),
+      );
+      results[commitHash][currentFileName][currentHunk].push(line);
+      currentHunk++;
       continue;
     }
     contextLines.push(line);
   }
-  results[commitHash][currentFileName].push(...contextLines.get());
+  if (!results[commitHash][currentFileName][currentHunk]) {
+    results[commitHash][currentFileName][currentHunk] = [];
+  }
+  results[commitHash][currentFileName][currentHunk].push(...contextLines.get());
+
   return results;
 };
 

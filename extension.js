@@ -219,14 +219,18 @@ async function executeGitSearch(rawQuery, panel) {
         </a> by ${author} at ${formatDate(commitDate)}
         ${Object.entries(diffOutput[commitHash])
           .map(
-            ([filename, diff]) =>
+            ([filename, diffs]) =>
               `<details id='${commitHash}|${filename}'>
               <summary>${filename}  <button id="dialogBtn" onclick="window.q('${commitHash}', '${filename}')">Show Full Diff</button></summary>
               <pre>${convert.toHtml(
-                highlightQueryInHtml(
-                  escapeHtml(diff.join("\n")),
-                  escapeHtml(query),
-                ),
+                diffs
+                  .map((diff) =>
+                    highlightQueryInHtml(
+                      escapeHtml(diff.join("\n")),
+                      escapeHtml(query),
+                    ),
+                  )
+                  .join("\n\n=======\n"),
               )}</pre>
           </details>`,
           )
