@@ -1,9 +1,11 @@
 const { executeCommand, Queue, Cache } = require("./helpers");
 const { gitDelimiter } = require("./consts");
 const escapedLineDiffStartsWith = "\u001b";
-const NUMBER_OF_DIFF_INFO_LINES = 4;
+const NUMBER_OF_DIFF_INFO_LINES = 6;
 const boldDiff = `${escapedLineDiffStartsWith}[1`;
-const changedDiff = `${escapedLineDiffStartsWith}[3`;
+const addedDiff = `${escapedLineDiffStartsWith}[31`;
+const removedDiff = `${escapedLineDiffStartsWith}[32`;
+const lineInfoDiff = `${escapedLineDiffStartsWith}[36`;
 
 async function getRepoUrl(workspaceFolderPath) {
   try {
@@ -71,6 +73,14 @@ const getFileNameFromGitInfoLines = (...diffInfoLines) => {
   return filename;
 };
 
+const getLineNumber = (line) => {
+  const regex = /\-(\d+),(\d+)/;
+  const match = regex.exec(line);
+  const startLine = parseInt(match[1], 10);
+  const numLines = parseInt(match[2], 10);
+  return startLine;
+};
+
 async function getDiff(
   workspaceFolderPath,
   commitHash,
@@ -98,8 +108,10 @@ const parseDiffToMap = (diff, commitHash, query, numberOfGrepContextLines) => {
   const fileInfoLines = new Queue(NUMBER_OF_DIFF_INFO_LINES);
   let prevLineWasInfoLine = false;
   let currentFileName = "";
-  let currentHunk = 0;
-  for (const line of lines) {
+  let currentHunkIdx = 0;
+  let currentLine = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     //check if line is bold (meaning info line)
     if (line.startsWith(boldDiff)) {
       fileInfoLines.push(line);
@@ -107,12 +119,18 @@ const parseDiffToMap = (diff, commitHash, query, numberOfGrepContextLines) => {
       prevLineWasInfoLine = true;
       continue;
     }
+    if (line.startsWith(lineInfoDiff)) {
+      currentLine = getLineNumber(line);
+    }
     // check if line is diff (meaning diffed (added/removed) line) and includes query)
-    if (line.startsWith(changedDiff) && line.includes(query)) {
+    if (
+      (line.startsWith(addedDiff) || line.startsWith(removedDiff)) &&
+      line.includes(query)
+    ) {
       if (prevLineWasInfoLine) {
         currentFileName = getFileNameFromGitInfoLines(...fileInfoLines.get());
         prevLineWasInfoLine = false;
-        currentHunk = 0;
+        currentHunkIdx = 0;
       }
       //we dont have a diff lines yet for this file
       if (!results[commitHash][currentFileName]) {
@@ -121,22 +139,49 @@ const parseDiffToMap = (diff, commitHash, query, numberOfGrepContextLines) => {
       // we have a diff lines and we want to add here more context lines
       // handle antoher case where line is not diffed
       if (results[commitHash][currentFileName]) {
-        results[commitHash][currentFileName][currentHunk] = [];
+        results[commitHash][currentFileName][currentHunkIdx] = [];
       }
-      results[commitHash][currentFileName][currentHunk].push(
-        ...contextLines.get(),
-      );
-      results[commitHash][currentFileName][currentHunk].push(line);
-      currentHunk++;
+      const currentHunk = results[commitHash][currentFileName][currentHunkIdx];
+      const contextLinesArr = contextLines.get();
+      contextLinesArr.forEach((line, index) => {
+        currentHunk.push({
+          line: currentLine - (contextLinesArr.length - index),
+          content: line,
+        });
+      });
+      currentHunk.push({
+        content: line,
+        line: currentLine,
+      });
+      let lastAddedLineIdx;
+      for (let j = 1; j < numberOfGrepContextLines; j++) {
+        if (i + j >= lines.length) {
+          lastAddedLineIdx = i + j - 1;
+          break;
+        }
+        currentHunk.push({
+          content: lines[i + j],
+          line: currentLine + j,
+        });
+      }
+      i += Math.min(lastAddedLineIdx, numberOfGrepContextLines) - 1;
+      currentHunkIdx++;
       continue;
     }
     contextLines.push(line);
   }
-  if (!results[commitHash][currentFileName][currentHunk]) {
-    results[commitHash][currentFileName][currentHunk] = [];
-  }
-  results[commitHash][currentFileName][currentHunk].push(...contextLines.get());
+  // if (!results[commitHash][currentFileName][currentHunkIdx]) {
+  //   results[commitHash][currentFileName][currentHunkIdx] = [];
+  // }
 
+  // const currentHunk = results[commitHash][currentFileName].at(-1);
+  // const contextLinesArr = contextLines.get();
+  // contextLinesArr.forEach((line, index) => {
+  //   currentHunk.push({
+  //     line: currentLine - (contextLinesArr.length - index),
+  //     content: line,
+  //   });
+  // });
   return results;
 };
 

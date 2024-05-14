@@ -21,7 +21,7 @@ const convert = new Convert({
   stream: true,
 });
 
-let PAGE_SIZE = 10;
+let PAGE_SIZE = 1;
 let MODE = "S";
 let NUMBER_OF_CONTEXT_LINES = 3;
 let latestQuery = "";
@@ -110,7 +110,7 @@ async function handleUpdateNumberOfContextLines(message, panel) {
 }
 
 async function handleSearchCommand(query, panel) {
-  if (query !== latestQuery) {
+  if (query === latestQuery) {
     currentCommits = [];
   }
   latestQuery = query;
@@ -219,14 +219,14 @@ async function executeGitSearch(rawQuery, panel) {
         </a> by ${author} at ${formatDate(commitDate)}
         ${Object.entries(diffOutput[commitHash])
           .map(
-            ([filename, diffs]) =>
+            ([filename, hunks]) =>
               `<details id='${commitHash}|${filename}'>
               <summary>${filename}  <button id="dialogBtn" onclick="window.q('${commitHash}', '${filename}')">Show Full Diff</button></summary>
               <pre>${convert.toHtml(
-                diffs
-                  .map((diff) =>
+                hunks
+                  .map((hunk) =>
                     highlightQueryInHtml(
-                      escapeHtml(diff.join("\n")),
+                      escapeHtml(hunk.map((line) => line.content).join("\n")),
                       escapeHtml(query),
                     ),
                   )
