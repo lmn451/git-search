@@ -36,10 +36,8 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "pretest": "pnpm run lint",
     "prettier": "prettier -w src",
-    "test": "node ./test/runTest.js",
-    "test:e2e": "node ./test/runE2ETest.js",
+    "test": "node ./test/runE2ETests.js",
     "prepare": "husky"
   },
   "devDependencies": {

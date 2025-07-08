@@ -27,4 +27,14 @@ function deactivate() {}
 module.exports = {
   activate,
   deactivate,
+  getTestApi: () => {
+    // This is a special export for testing purposes only.
+    if (process.env.VSCODE_TEST) {
+      const webviewManager = require("./src/webviewManager");
+      return {
+        getCurrentPanel: webviewManager.getCurrentPanel,
+      };
+    }
+    return null;
+  },
 };

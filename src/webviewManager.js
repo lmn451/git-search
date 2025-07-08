@@ -59,6 +59,13 @@ async function createOrShow(extensionUri) {
   currentPanel.webview.onDidReceiveMessage(
     async (message) => {
       switch (message.command) {
+        case "webview-ready":
+          // This is a signal from the webview that it has loaded and is ready.
+          // In a test environment, this is crucial for synchronization.
+          if (process.env.VSCODE_TEST) {
+            console.log("Webview is ready for testing.");
+          }
+          return;
         case "search":
           currentSearchQuery = message.text;
           currentPage = 1;
@@ -183,4 +190,5 @@ function getNonce() {
 
 module.exports = {
   createOrShow,
+  getCurrentPanel: () => currentPanel,
 };

@@ -1,408 +1,355 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Git Search</title>
     <style>
-      html {
-        scroll-behavior: smooth;
-      }
       body {
-        font-family: var(--vscode-editor-font-family);
-        display: grid;
-        grid-template-rows: auto 1fr auto;
-        height: 100vh;
+        font-family: var(--vscode-font-family);
+        font-size: var(--vscode-font-size);
+        color: var(--vscode-foreground);
+        background-color: var(--vscode-editor-background);
+        padding: 10px;
+        overflow-y: auto;
       }
-      pre {
-        font-family: var(--vscode-editor-font-family);
-      }
-      header {
-        height: 75px;
-      }
-
-      :focus {
-        border-color: var(--vscode-focusBorder);
-      }
-
-      input {
+      #searchInput,
+      #findInput {
+        width: calc(100% - 100px);
+        padding: 8px;
+        margin-bottom: 10px;
+        border: 1px solid var(--vscode-input-border);
         background-color: var(--vscode-input-background);
         color: var(--vscode-input-foreground);
-        border-color: var(--vscode-inputOption-activeBorder);
+        border-radius: 4px;
       }
-
-      input::-webkit-input-placeholder {
-        color: var(--vscode-input-placeholderForeground);
-      }
-
-      button {
+      #searchButton,
+      #loadMore,
+      #resetButton,
+      #findPrev,
+      #findNext {
+        padding: 8px 12px;
+        border: 1px solid var(--vscode-button-border, transparent);
         background-color: var(--vscode-button-background);
         color: var(--vscode-button-foreground);
-        border: none;
+        cursor: pointer;
+        border-radius: 4px;
+        margin-left: 5px;
       }
-
-      button:hover {
+      #loadMore {
+        display: none;
+        width: 100%;
+        margin-top: 10px;
+      }
+      #searchButton:hover,
+      #loadMore:hover,
+      #resetButton:hover,
+      #findPrev:hover,
+      #findNext:hover {
         background-color: var(--vscode-button-hoverBackground);
       }
-
-      #searchQuery {
-        padding: 8px;
-        margin: 8px;
-        flex-grow: 1;
+      ul#results {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        font-family: var(--vscode-editor-font-family);
       }
-
-      #searchBtn,
-      #loadMoreBtn,
-      #resetBtn {
-        padding: 8px 16px;
-        margin: 8px 0;
+      ul#results span {
+        white-space: pre-wrap;
       }
-
-      #results {
-        overflow: auto;
+      .commit-item {
+        margin-bottom: 10px;
+        padding: 5px;
+        border-radius: 3px;
+        background-color: var(--vscode-editorWidget-background);
+        border: 1px solid var(--vscode-editorWidget-border);
       }
-
-      .commit {
-        padding: 10px;
-        border-bottom: 1px solid #ccc;
-      }
-
-      .commit a {
+      a {
+        color: var(--vscode-textLink-foreground);
         text-decoration: none;
-        color: blue;
       }
-
-      .find-widget {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        align-items: center;
+      a:hover {
+        text-decoration: underline;
       }
-
       .highlight {
-        background-color: yellow;
-        color: black;
+        background-color: var(--vscode-editor-findMatchHighlightBackground);
+        color: var(--vscode-editor-foreground);
+        border-radius: 2px;
       }
-
-      .current-highlight {
-        background-color: orange;
-        color: black;
-      }
-
-      .search-container {
-        justify-content: space-between;
-        display: flex;
-        gap: 16px;
-      }
-      .modeContainer {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .searched-query {
-        border: 1px solid blueviolet;
-      }
-
-      #numberOfContextLines {
-        width: 32px;
-      }
-
-      .search-handlers-container {
-        display: flex;
-        gap: 8px;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .search-settings {
-        display: flex;
-        gap: 8px;
-      }
-
-      footer {
-        display: grid;
-      }
-
-      #loadMoreBtn {
-        justify-self: flex-end;
-      }
-
-      #goTopBtn {
+      .find-container {
         position: fixed;
-        bottom: 60px;
-        right: 20px;
-        width: 36px;
-        height: 36px;
+        top: 10px;
+        right: 10px;
+        background-color: var(--vscode-editorWidget-background);
+        padding: 5px;
+        border: 1px solid var(--vscode-editorWidget-border);
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
         z-index: 1000;
-        padding: 8px;
-        border-radius: 50%;
-        cursor: pointer;
-        opacity: 0.7;
-        transition: opacity 0.2s;
+        box-shadow: 0 2px 8px var(--vscode-widget-shadow);
       }
-
-      #goTopBtn:hover {
-        opacity: 1;
+      #findInput {
+        width: 150px;
+        margin-bottom: 0;
+      }
+      #findPrev,
+      #findNext {
+        margin-left: 2px;
+      }
+      .dialog-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+      }
+      .dialog-content {
+        background-color: var(--vscode-editor-background);
+        padding: 20px;
+        border-radius: 5px;
+        width: 80%;
+        max-height: 80vh;
+        overflow-y: auto;
+        border: 1px solid var(--vscode-editorWidget-border);
+        box-shadow: 0 4px 12px var(--vscode-widget-shadow);
+      }
+      .dialog-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .dialog-close {
+        cursor: pointer;
+        background: none;
+        border: none;
+        color: var(--vscode-foreground);
+        font-size: 24px;
+        line-height: 1;
       }
     </style>
-    <title>Git Search</title>
   </head>
+  <body>
+    <input type="text" id="searchInput" placeholder="Enter search query..." />
+    <button id="searchButton">Search</button>
+    <button id="resetButton">Reset</button>
 
-  <body onload="searchQuery.focus()">
-    <header>
-      <div class="search-container">
-        <input
-          type="text"
-          id="searchQuery"
-          placeholder="Enter search query (regexp friendly when G mode is enabled)"
-        />
-        <div class="search-handlers-container">
-          <div class="search-settings">
-            <div
-              class="modeContainer"
-              title="'G mode' refers to git log -G, a broader search than the standard 'S mode'"
-            >
-              <input type="checkbox" id="modeG" name="modeG" />
-              <label for="modeG">G mode</label>
-            </div>
-            <div class="modeContainer" title="Change number of context lines ">
-              <input
-                type="number"
-                min="1"
-                value="3"
-                id="numberOfContextLines"
-                name="numberOfContextLines"
-              />
-              <label for="numberOfContextLines">Number of context lines</label>
-            </div>
-          </div>
-          <div class="button-containers">
-            <button id="searchBtn">Search</button>
-            <button id="resetBtn">Reset</button>
-          </div>
+    <div id="results" class="results-container"></div>
+    <button id="loadMore">Load More</button>
+
+    <div class="find-container">
+      <input type="text" id="findInput" placeholder="Find in results..." />
+      <button id="findPrev">↑</button>
+      <button id="findNext">↓</button>
+    </div>
+
+    <div id="dialogOverlay" class="dialog-overlay" style="display: none">
+      <div class="dialog-content">
+        <div class="dialog-header">
+          <h3>Full Diff</h3>
+          <button id="dialogClose" class="dialog-close">&times;</button>
         </div>
+        <div id="dialogBody"></div>
       </div>
-      <div id="findWidget" class="find-widget" style="display: none">
-        <input type="text" id="findInput" placeholder="Find" />
-        <span id="matchCount"></span>
-        <button id="findPrev">Previous</button>
-        <button id="findNext">Next</button>
-      </div>
-    </header>
-    <div id="results"></div>
-    <button id="goTopBtn" aria-label="Go to top" style="display: none">
-      ↑
-    </button>
-    <footer>
-      <button id="loadMoreBtn" style="display: none">Load More</button>
-    </footer>
+    </div>
 
-    <script>
-      //Go to top button logic
-      results.addEventListener("scroll", () => {
-        if (results.scrollTop > 100) {
-          goTopBtn.style.display = "block";
-        } else {
-          goTopBtn.style.display = "none";
+    <script nonce="{{nonce}}">
+      const vscode = acquireVsCodeApi();
+
+      // Signal to the extension that the webview is ready.
+      window.addEventListener("load", () => {
+        vscode.postMessage({
+          command: "webview-ready",
+        });
+      });
+
+      const searchInput = document.getElementById("searchInput");
+      const searchButton = document.getElementById("searchButton");
+      const resetButton = document.getElementById("resetButton");
+      const resultsDiv = document.getElementById("results");
+      const loadMoreButton = document.getElementById("loadMore");
+      const findInput = document.getElementById("findInput");
+      const findPrev = document.getElementById("findPrev");
+      const findNext = document.getElementById("findNext");
+      const dialogOverlay = document.getElementById("dialogOverlay");
+      const dialogClose = document.getElementById("dialogClose");
+      const dialogBody = document.getElementById("dialogBody");
+
+      let currentHighlights = [];
+      let currentFindIndex = -1;
+
+      findInput.addEventListener("input", () =>
+        searchAndHighlight(findInput.value),
+      );
+      findInput.addEventListener(
+        "keydown",
+        (e) => e.key === "Enter" && navigateFind("next"),
+      );
+      findPrev.addEventListener("click", () => navigateFind("prev"));
+      findNext.addEventListener("click", () => navigateFind("next"));
+
+      dialogOverlay.addEventListener("click", (e) => {
+        if (e.target === dialogOverlay) {
+          dialogOverlay.style.display = "none";
         }
       });
 
-      goTopBtn.addEventListener("click", () => {
-        results.scrollTo({
-          top: 0,
-          behavior: "smooth",
-        });
+      dialogClose.addEventListener("click", () => {
+        dialogOverlay.style.display = "none";
       });
 
-      // Mode logic
-      modeG.addEventListener("change", (e) => {
-        vscode.postMessage({
-          command: "changeMode",
-          mode: e.target.checked ? "G" : "S",
+      function searchAndHighlight(term) {
+        // Clear previous highlights
+        currentHighlights.forEach((el) => {
+          el.outerHTML = el.innerHTML; // Replace the span with its content
         });
-      });
+        currentHighlights = [];
+        currentFindIndex = -1;
 
-      numberOfContextLines.addEventListener("change", (e) => {
-        vscode.postMessage({
-          command: "updateNumberOfContextLines",
-          value: Number(e.target.value),
-        });
-      });
+        if (!term) return; // Do nothing if search term is empty
 
-      //Search Logic
-      const vscode = acquireVsCodeApi();
+        const regex = new RegExp(term, "gi");
+        const resultsContainer = document.getElementById("results");
 
-      function ifEnterSearch(e) {
-        e.key === "Enter" &&
-          vscode.postMessage({ command: "search", text: searchQuery.value });
+        // Function to process a node and its children
+        function processNode(node) {
+          if (
+            node.nodeType === Node.TEXT_NODE &&
+            node.parentNode.nodeName !== "SCRIPT" &&
+            node.parentNode.nodeName !== "STYLE"
+          ) {
+            const text = node.textContent;
+            let lastIndex = 0;
+            const newNodes = [];
+            let match;
+
+            while ((match = regex.exec(text)) !== null) {
+              if (match.index > lastIndex) {
+                newNodes.push(
+                  document.createTextNode(text.slice(lastIndex, match.index)),
+                );
+              }
+              const highlightSpan = document.createElement("span");
+              highlightSpan.className = "highlight";
+              highlightSpan.textContent = match[0];
+              newNodes.push(highlightSpan);
+              currentHighlights.push(highlightSpan);
+              lastIndex = regex.lastIndex;
+            }
+            if (lastIndex < text.length) {
+              newNodes.push(document.createTextNode(text.slice(lastIndex)));
+            }
+
+            if (newNodes.length > 0) {
+              const parent = node.parentNode;
+              newNodes.forEach((newNode) => parent.insertBefore(newNode, node));
+              parent.removeChild(node);
+            }
+          } else if (node.nodeType === Node.ELEMENT_NODE) {
+            // Recursively process child nodes, avoiding script and style tags
+            if (node.nodeName !== "SCRIPT" && node.nodeName !== "STYLE") {
+              Array.from(node.childNodes).forEach(processNode);
+            }
+          }
+        }
+
+        processNode(resultsContainer);
+
+        if (currentHighlights.length > 0) {
+          currentFindIndex = 0;
+          currentHighlights[currentFindIndex].style.backgroundColor =
+            "var(--vscode-editor-findMatchBackground)";
+        }
       }
 
-      searchQuery.addEventListener("keydown", ifEnterSearch);
+      function navigateFind(direction) {
+        if (currentHighlights.length === 0) return;
 
-      searchBtn.addEventListener("click", () => {
-        const query = searchQuery.value;
-        vscode.postMessage({ command: "search", text: query });
+        // Reset style of the current highlight
+        currentHighlights[currentFindIndex].style.backgroundColor =
+          "var(--vscode-editor-findMatchHighlightBackground)";
+
+        if (direction === "next") {
+          currentFindIndex = (currentFindIndex + 1) % currentHighlights.length;
+        } else {
+          currentFindIndex =
+            (currentFindIndex - 1 + currentHighlights.length) %
+            currentHighlights.length;
+        }
+
+        const nextHighlight = currentHighlights[currentFindIndex];
+        nextHighlight.style.backgroundColor =
+          "var(--vscode-editor-findMatchBackground)";
+        nextHighlight.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+
+      searchButton.addEventListener("click", () => {
+        const query = searchInput.value;
+        if (query) {
+          vscode.postMessage({
+            command: "search",
+            text: query,
+          });
+        }
       });
 
-      resetBtn.addEventListener("click", () => {
-        searchQuery.value = "";
+      resetButton.addEventListener("click", () => {
+        searchInput.value = "";
+        resultsDiv.innerHTML = "";
+        loadMoreButton.style.display = "none";
         vscode.postMessage({ command: "reset" });
       });
 
-      loadMoreBtn.addEventListener("click", () => {
-        loadMoreBtn.innerHTML = "Loading";
-        loadMoreBtn.disabled = true;
-        vscode.postMessage({ command: "loadMore", text: "" });
+      searchInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          searchButton.click();
+        }
+      });
+
+      loadMoreButton.addEventListener("click", () => {
+        vscode.postMessage({ command: "loadMore" });
+      });
+
+      resultsDiv.addEventListener("click", (event) => {
+        if (event.target.tagName === "A" && event.target.dataset.commitHash) {
+          event.preventDefault();
+          const commitHash = event.target.dataset.commitHash;
+          const filename = event.target.dataset.filename;
+          vscode.postMessage({ command: "getFullDiff", commitHash, filename });
+        }
       });
 
       window.addEventListener("message", (event) => {
         const message = event.data;
         switch (message.command) {
           case "showResults":
-            results.innerHTML = message.text
-              ? `<ol id='list'>${message.text}</ol>`
-              : "No results found";
-            loadMoreBtn.style.display = message.isLoadMore ? "block" : "none";
-            loadMoreBtn.innerHTML = "Load More";
-            loadMoreBtn.disabled = false;
-            break;
-          case "appendResults":
-            list.innerHTML += message.text || "Nothing More";
-            loadMoreBtn.style.display = message.text ? "block" : "none";
-            loadMoreBtn.innerHTML = "Load More";
-            loadMoreBtn.disabled = false;
+            if (message.append) {
+              resultsDiv.innerHTML += message.html;
+            } else {
+              resultsDiv.innerHTML = message.html;
+            }
+            loadMoreButton.style.display = "block";
             break;
           case "reset":
-            results.innerHTML = "";
-            loadMoreBtn.style.display = "none";
-            findInput.value = "";
-            matchCount.innerHTML = "";
-            loadMoreBtn.innerHTML = "Load More";
-            loadMoreBtn.disabled = false;
+            searchInput.value = "";
+            resultsDiv.innerHTML = "";
+            loadMoreButton.style.display = "none";
+            break;
+          case "showDialog":
+            dialogBody.innerHTML = message.text;
+            dialogOverlay.style.display = "flex";
             break;
         }
       });
-
-      //Toggle find
-      let findTriggered = false;
-
-      document.addEventListener("keydown", function (event) {
-        // Check for CMD+F on Mac or CTRL+F on Windows
-        if ((event.metaKey || event.ctrlKey) && event.key === "f") {
-          event.preventDefault(); // Prevent the default find behavior
-          findTriggered = !findTriggered;
-          findWidget.style.display = findTriggered ? "flex" : "none";
-          if (findTriggered) findInput.focus();
-          else searchQuery.focus();
-        }
-      });
-
-      // Find Logic
-      let findMatches = [];
-      let currentFindIndex = -1;
-
-      findInput.addEventListener("input", () =>
-        searchAndHighlight(findInput.value)
-      );
-      findInput.addEventListener(
-        "keydown",
-        (e) => e.key === "Enter" && navigateFind("next")
-      );
-      findPrev.addEventListener("click", () => navigateFind("prev"));
-      findNext.addEventListener("click", () => navigateFind("next"));
-
-      function searchAndHighlight(query) {
-        resetHighlights();
-        findMatches = [];
-        currentFindIndex = -1;
-        if (!query) {
-          updateMatchCount(0, 0); // Reset counter when query is empty
-          return;
-        }
-
-        const regex = new RegExp(escapeRegExp(query), "gi");
-        document.querySelectorAll(".commit-diff").forEach((commitElem) => {
-          processNode(commitElem, regex);
-        });
-
-        if (findMatches.length > 0) {
-          navigateFind("next");
-        } else {
-          updateMatchCount(0, 0);
-        }
-      }
-
-      function processNode(node, regex) {
-        if (node.nodeType === Node.TEXT_NODE) {
-          const text = node.textContent;
-          const parent = node.parentNode;
-          const docFrag = document.createDocumentFragment();
-
-          let startIndex = 0,
-            match;
-          while ((match = regex.exec(text)) !== null) {
-            docFrag.appendChild(
-              document.createTextNode(text.substring(startIndex, match.index))
-            );
-
-            const highlightSpan = document.createElement("span");
-            highlightSpan.className = "highlight";
-            highlightSpan.textContent = match[0];
-            docFrag.appendChild(highlightSpan);
-            findMatches.push(highlightSpan);
-
-            startIndex = match.index + match[0].length;
-          }
-          docFrag.appendChild(
-            document.createTextNode(text.substring(startIndex))
-          );
-
-          if (startIndex > 0) {
-            parent.replaceChild(docFrag, node);
-          }
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-          Array.from(node.childNodes).forEach((child) =>
-            processNode(child, regex)
-          );
-        }
-      }
-
-      function navigateFind(direction) {
-        if (findMatches.length === 0) return;
-        if (currentFindIndex !== -1) {
-          findMatches[currentFindIndex].classList.remove("current-highlight");
-        }
-        if (direction === "next") {
-          currentFindIndex = (currentFindIndex + 1) % findMatches.length;
-        } else if (direction === "prev") {
-          currentFindIndex =
-            (currentFindIndex - 1 + findMatches.length) % findMatches.length;
-        }
-        findMatches[currentFindIndex].classList.add("current-highlight");
-        findMatches[currentFindIndex].scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-        updateMatchCount(currentFindIndex + 1, findMatches.length);
-      }
-
-      function updateMatchCount(currentIndex, totalMatches) {
-        matchCount.textContent =
-          totalMatches > 0 ? `${currentIndex} of ${totalMatches}` : "";
-      }
-
-      function resetHighlights() {
-        document.querySelectorAll(".highlight").forEach((highlightSpan) => {
-          const textNode = document.createTextNode(highlightSpan.textContent);
-          const parent = highlightSpan.parentNode;
-          parent.replaceChild(textNode, highlightSpan);
-          parent.normalize(); // Normalize merges adjacent text nodes
-        });
-        findMatches = [];
-        currentFindIndex = -1;
-      }
-
-      function escapeRegExp(text) {
-        return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      }
     </script>
   </body>
 </html>

@@ -1,7 +1,12 @@
-# Files to Remove
+# Files to Remove: Obsolete Testing Workflow
 
-Based on the recent refactoring, the following files are no longer in use and can be safely deleted to clean up the project.
+The following files are part of the old, fragmented testing strategy. They have been replaced by a single, comprehensive end-to-end test suite (`test/e2e.test.js`) and a dedicated test runner (`test/runE2ETests.js`). These files can be safely deleted to finalize the transition to the new testing workflow.
 
-- `test/gitCommands.test.js`: This file contains tests for the legacy `gitCommands.js` module, which has been replaced by `src/gitService.js`. The tests are no longer relevant.
-- `test/messageHandler.test.js`: This file tests the logic from the old `extension.js` before it was refactored. The responsibilities have been moved to `src/webviewManager.js`, making these tests obsolete.
-- `test/vscode.mock.js`: This mock was used exclusively by `messageHandler.test.js` and is therefore no longer needed.
+- `test/runTest.js`: The old test runner for the unit test suite.
+- `test/runE2ETest.js`: The temporary E2E test runner that is now obsolete.
+- `test/suite/extension.test.js`: The main unit test file that relied heavily on mocking and is now superseded by the E2E test.
+- `test/suite/index.js`: The entry point for the old Mocha unit test suite.
+- `test/e2e/search.e2e.test.js`: The previous, incomplete E2E test file.
+- `test/gitCommands.test.js`: Contains tests for the legacy `gitCommands.js` module, which has been removed.
+- `test/messageHandler.test.js`: Contains tests for logic that has been refactored or removed.
+- `test/vscode.mock.js`: A mock of the `vscode` API used by the old unit tests.
