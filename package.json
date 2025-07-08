@@ -38,20 +38,32 @@
     "lint": "eslint .",
     "pretest": "pnpm run lint",
     "prettier": "prettier -w src",
-    "test": "node ./test/runTest.js"
+    "test": "node ./test/runTest.js",
+    "test:e2e": "node ./test/runE2ETest.js",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "@types/mocha": "^10.0.6",
-    "@types/node": "~18.19.14",
-    "@types/vscode": "^1.86.0",
-    "@vscode/test-electron": "^2.3.9",
-    "eslint": "^8.56.0",
-    "glob": "^10.3.10",
-    "mocha": "^10.2.0",
-    "sinon": "^17.0.1",
-    "typescript": "^5.3.3"
+    "@types/mocha": "^10.0.10",
+    "@types/node": "~24.0.10",
+    "@types/vscode": "^1.101.0",
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.30.1",
+    "glob": "^11.0.3",
+    "globals": "^16.3.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
+    "mocha": "^11.7.1",
+    "prettier": "^3.6.2",
+    "sinon": "^21.0.0",
+    "typescript": "^5.8.3"
   },
   "dependencies": {
     "ansi-to-html": "^0.7.2"
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   }
 }
