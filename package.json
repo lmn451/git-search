@@ -37,8 +37,7 @@
   "scripts": {
     "lint": "eslint .",
     "pretest": "pnpm run lint",
-    "prettier": "prettier -w src",
-    "test": "node ./test/runTest.js"
+    "prettier": "prettier -w src"
   },
   "prettier": {},
   "devDependencies": {
