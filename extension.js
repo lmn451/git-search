@@ -1,32 +1,10 @@
-const {
-  getRelatedCommitsInfo,
-  getDiff,
-  getRepoUrl,
-} = require("./src/gitCommands");
+const { SearchEngine } = require("./src/searchEngine");
+const gitCommands = require("./src/gitCommands");
 const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
-const Convert = require("ansi-to-html");
-const { adjustDate, formatDate } = require("./src/helpers");
-const { highlightQueryInHtml, escapeHtml } = require("./src/htmlHelpers");
 
-const convert = new Convert({
-  colors: [
-    "#000000", // Black
-    "#DB7093", // Red
-    // "#00FF00", // Green
-  ],
-  stream: true,
-});
-
-let PAGE_SIZE = 10;
-let MODE = "S";
-let NUMBER_OF_CONTEXT_LINES = 3;
-let latestQuery = "";
-let isLoadMore = false;
-let lastCommitDate = "";
-let currentCommits = [];
-let redraw = false;
+let searchEngine;
 
 const getWorkspace = () => {
   try {
@@ -37,6 +15,8 @@ const getWorkspace = () => {
 };
 
 function activate(context) {
+  searchEngine = new SearchEngine(gitCommands);
+  
   let disposable = vscode.commands.registerCommand("git-search.showPanel", () =>
     showPanel(context)
   );
@@ -61,61 +41,76 @@ function showPanel(context) {
 }
 
 function handleWebviewMessage(message, panel) {
-  switch (message.command) {
-    case "search":
-      handleSearchCommand(message.text, panel);
-      break;
-    case "loadMore":
-      handleLoadMoreCommand(panel);
-      break;
-    case "reset":
-      handleResetCommand(panel);
-      break;
-    case "changeMode":
-      handleChangeMode(message.mode);
-      break;
-    case "updateNumberOfContextLines":
-      handleUpdateNumberOfContextLines(message, panel);
-      break;
-  }
+  return new Promise(async (resolve) => {
+    try {
+      switch (message.command) {
+        case "search":
+          await handleSearchCommand(message.text, panel);
+          break;
+        case "loadMore":
+          await handleLoadMoreCommand(panel);
+          break;
+        case "reset":
+          handleResetCommand(panel);
+          break;
+        case "changeMode":
+          handleChangeMode(message.mode);
+          break;
+        case "updateNumberOfContextLines":
+          await handleUpdateNumberOfContextLines(message, panel);
+          break;
+      }
+    } catch (error) {
+      vscode.window.showErrorMessage(`Error: ${error.message}`);
+      panel.webview.postMessage({
+        command: "showResults",
+        text: error.message,
+      });
+    }
+    resolve();
+  });
 }
 
 async function handleUpdateNumberOfContextLines(message, panel) {
-  NUMBER_OF_CONTEXT_LINES = message.value;
-  lastCommitDate = "";
-  redraw = true;
-  isLoadMore = false;
-  await executeGitSearch(latestQuery, panel);
+  searchEngine.updateContextLines(message.value);
+  const result = await searchEngine.search(searchEngine.latestQuery, getWorkspace());
+  panel.webview.postMessage({
+    command: "showResults",
+    text: result.html,
+    latestQuery: result.latestQuery,
+    isLoadMore: result.canLoadMore,
+  });
 }
 
 async function handleSearchCommand(query, panel) {
-  if (query !== latestQuery) {
-    currentCommits = [];
-  }
-  latestQuery = query;
-  isLoadMore = false;
-  lastCommitDate = "";
   panel.webview.postMessage({ command: "showResults", text: "Loading" });
-  await executeGitSearch(query, panel);
+  
+  const result = await searchEngine.search(query, getWorkspace());
+  panel.webview.postMessage({
+    command: "showResults",
+    text: result.html,
+    latestQuery: result.latestQuery,
+    isLoadMore: result.canLoadMore,
+  });
 }
 
 async function handleLoadMoreCommand(panel) {
-  isLoadMore = true;
-  redraw = true;
-  await executeGitSearch(latestQuery, panel);
+  const result = await searchEngine.loadMore(getWorkspace());
+  panel.webview.postMessage({
+    command: result.isLoadMore ? "showResults" : "appendResults",
+    text: result.html,
+    latestQuery: result.latestQuery,
+    isLoadMore: result.canLoadMore,
+  });
 }
 
 function handleResetCommand(panel) {
-  latestQuery = "";
-  isLoadMore = false;
-  lastCommitDate = "";
-  currentCommits = [];
+  searchEngine.reset();
   panel.webview.postMessage({ command: "reset", text: "" });
 }
 
 function handleChangeMode(value) {
-  if (!(value === "G" || value === "S")) return;
-  MODE = value;
+  searchEngine.changeMode(value);
 }
 
 function getWebviewContent() {
@@ -123,98 +118,16 @@ function getWebviewContent() {
   return fs.readFileSync(htmlFilePath, "utf8");
 }
 
-async function executeGitSearch(rawQuery, panel) {
-  const query = rawQuery.trim();
-  if (!query) {
-    return panel.webview.postMessage({
-      command: "showResults",
-      text: "",
-    });
-  }
+function deactivate() {}
 
-  try {
-    const workspaceFolderPath = getWorkspace();
-    if (!workspaceFolderPath)
-      return panel.webview.postMessage({
-        command: "showResults",
-        text: `No workspace found`,
-      });
-    const repoUrl = await getRepoUrl(workspaceFolderPath);
-
-    if (!redraw || isLoadMore) {
-      const logOutput = await getRelatedCommitsInfo(
-        workspaceFolderPath,
-        query,
-        MODE,
-        lastCommitDate,
-        PAGE_SIZE
-      );
-      if (!logOutput)
-        return panel.webview.postMessage({
-          command: isLoadMore ? "appendResults" : "showResults",
-          text: null,
-          isLoadMore: false,
-        });
-
-      const commits = logOutput
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean);
-
-      currentCommits.push(...commits);
-      lastCommitDate = adjustDate(commits.at(-1).split("|")[2]);
-    }
-
-    const diffPromises = currentCommits.map((commitEntry) => {
-      const [commitHash, author, commitDate] = commitEntry.split("|");
-      return getDiff(
-        workspaceFolderPath,
-        commitHash,
-        query,
-        NUMBER_OF_CONTEXT_LINES
-      )
-        .then((diffOutput) => ({ commitHash, diffOutput, commitDate, author }))
-        .catch((error) => {
-          vscode.window.showErrorMessage(error.stack);
-          return null; // Continue processing other commits
-        });
-    });
-
-    const diffResults = await Promise.all(diffPromises);
-    const contentArray = diffResults.map((diff) => {
-      if (!diff) return "";
-      const { commitHash, diffOutput, commitDate, author } = diff;
-      const highlightedDiff = highlightQueryInHtml(
-        escapeHtml(diffOutput),
-        escapeHtml(query)
-      );
-      const diffHtml = convert.toHtml(highlightedDiff);
-      return `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author} at ${formatDate(
-        commitDate
-      )}<br><pre>${diffHtml}</pre></li>`;
-    });
-
-    let content = contentArray.join("");
-    panel.webview.postMessage({
-      command: redraw
-        ? "showResults"
-        : isLoadMore
-        ? "appendResults"
-        : "showResults",
-      text: content || "No results found",
-      latestQuery,
-      isLoadMore: contentArray ? contentArray.length == PAGE_SIZE : false,
-    });
-  } catch (error) {
-    vscode.window.showErrorMessage(error.stack);
-    panel.webview.postMessage({
-      command: "showResults",
-      text: error,
-    });
-  }
+// Expose searchEngine for testing
+function getSearchEngine() {
+  return searchEngine;
 }
 
-function deactivate() {}
+function setSearchEngine(engine) {
+  searchEngine = engine;
+}
 
 module.exports = {
   activate,
@@ -224,5 +137,8 @@ module.exports = {
   handleResetCommand,
   handleWebviewMessage,
   getWebviewContent,
-  executeGitSearch,
+  showPanel,
+  SearchEngine, // Export for testing
+  getSearchEngine,
+  setSearchEngine,
 };

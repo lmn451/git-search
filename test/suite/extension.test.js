@@ -1,82 +1,207 @@
-const assert = require("assert");
-const sinon = require("sinon");
-const vscode = require("vscode");
-const child_process = require("child_process");
-const fs = require("fs");
-const extension = require("../../extension");
-const { executeCommand } = require("../../src/helpers");
+const assert = require('assert');
+const vscode = require('vscode');
+const sinon = require('sinon');
+const myExtension = require('../../extension');
 
-describe("Git Search Extension Tests", () => {
-  beforeEach(() => {
-    sinon.stub(child_process, "exec");
-    sinon.stub(fs, "readFileSync");
-    sinon.stub(vscode.window, "createWebviewPanel");
-  });
+suite('Extension Integration Tests', () => {
+    let sandbox;
+    let mockPanel;
+    let postMessageStub;
+    let mockSearchEngine;
 
-  afterEach(() => {
-    sinon.restore();
-  });
+    setup(() => {
+        sandbox = sinon.createSandbox();
 
-  it("should handle search command correctly", async () => {
-    const mockPanel = { webview: { postMessage: sinon.spy() } };
-    extension.handleWebviewMessage(
-      { command: "search", text: "test query" },
-      mockPanel
-    );
-    assert.ok(
-      mockPanel.webview.postMessage.calledWith({
-        command: "showResults",
-        text: "Loading",
-      })
-    );
-  });
+        // Create a mock panel
+        postMessageStub = sandbox.stub();
+        mockPanel = {
+            webview: {
+                html: '',
+                postMessage: postMessageStub,
+            },
+            reveal: () => {},
+            dispose: () => {},
+        };
 
-  it("should handle load more command correctly", async () => {
-    const mockPanel = { webview: { postMessage: sinon.spy() } };
-    extension.handleWebviewMessage({ command: "loadMore" }, mockPanel);
-    assert.ok(mockPanel.webview.postMessage.called);
-  });
+        // Create a mock SearchEngine
+        mockSearchEngine = {
+            search: sandbox.stub(),
+            loadMore: sandbox.stub(),
+            reset: sandbox.stub(),
+            changeMode: sandbox.stub(),
+            updateContextLines: sandbox.stub(),
+            latestQuery: ''
+        };
 
-  it("should handle reset command correctly", () => {
-    const mockPanel = { webview: { postMessage: sinon.spy() } };
-    extension.handleWebviewMessage({ command: "reset" }, mockPanel);
-    assert.ok(
-      mockPanel.webview.postMessage.calledWith({ command: "reset", text: "" })
-    );
-  });
+        // Replace the search engine in the extension
+        myExtension.setSearchEngine(mockSearchEngine);
 
-  it("should execute Git search and update panel", async () => {
-    const mockPanel = { webview: { postMessage: sinon.spy() } };
-    child_process.exec.callsArgWith(
-      2,
-      null,
-      "commitHash|authorName|commitDate\n"
-    );
-    await extension.executeGitSearch("test query", mockPanel);
-    assert.ok(mockPanel.webview.postMessage.called);
-  });
+        // Stub workspace
+        sandbox.stub(vscode.workspace, 'workspaceFolders').value([{
+            uri: { fsPath: '/test/workspace' }
+        }]);
+    });
 
-  xit("should execute command and return result", async () => {
-    child_process.exec.callsArgWith(2, null, "output", "");
-    const result = await executeCommand("git status", ".");
-    assert.equal(result, "output");
-  });
+    teardown(() => {
+        sandbox.restore();
+    });
 
-  xit("should get repository URL", async () => {
-    child_process.exec.callsArgWith(
-      2,
-      null,
-      "git@github.com:user/repo.git",
-      ""
-    );
-    const url = await extension.getRepoUrl(".");
-    assert.equal(url, "https://github.com/user/repo");
-  });
+    suite('Message Handling', () => {
+        test('should handle search command', async () => {
+            mockSearchEngine.search.resolves({
+                html: '<li>Test result</li>',
+                canLoadMore: true,
+                latestQuery: 'test'
+            });
 
-  it("should load HTML content for Webview", () => {
-    const htmlString = "<html>Mock Content</html>";
-    fs.readFileSync.returns(htmlString);
-    const content = extension.getWebviewContent();
-    assert.ok(content.includes(htmlString));
-  });
-});
+            await myExtension.handleWebviewMessage({ 
+                command: 'search', 
+                text: 'test query' 
+            }, mockPanel);
+
+            // Should show loading first
+            assert.ok(postMessageStub.calledWith({ 
+                command: 'showResults', 
+                text: 'Loading' 
+            }));
+
+            // Should call search engine
+            assert.ok(mockSearchEngine.search.calledWith('test query', '/test/workspace'));
+
+            // Should post results
+            assert.ok(postMessageStub.calledWith({
+                command: 'showResults',
+                text: '<li>Test result</li>',
+                latestQuery: 'test',
+                isLoadMore: true
+            }));
+        });
+
+        test('should handle reset command', async () => {
+            await myExtension.handleWebviewMessage({ 
+                command: 'reset' 
+            }, mockPanel);
+
+            assert.ok(mockSearchEngine.reset.called);
+            assert.ok(postMessageStub.calledWith({ 
+                command: 'reset', 
+                text: '' 
+            }));
+        });
+
+        test('should handle changeMode command', async () => {
+            await myExtension.handleWebviewMessage({ 
+                command: 'changeMode', 
+                mode: 'G' 
+            }, mockPanel);
+
+            assert.ok(mockSearchEngine.changeMode.calledWith('G'));
+        });
+
+        test('should handle loadMore command', async () => {
+            mockSearchEngine.loadMore.resolves({
+                html: '<li>More results</li>',
+                canLoadMore: false,
+                latestQuery: 'test',
+                isLoadMore: true
+            });
+
+            await myExtension.handleWebviewMessage({ 
+                command: 'loadMore' 
+            }, mockPanel);
+
+            assert.ok(mockSearchEngine.loadMore.calledWith('/test/workspace'));
+            assert.ok(postMessageStub.calledWith({
+                command: 'showResults',
+                text: '<li>More results</li>',
+                latestQuery: 'test',
+                isLoadMore: false
+            }));
+        });
+
+        test('should handle updateNumberOfContextLines command', async () => {
+            mockSearchEngine.latestQuery = 'previous query';
+            mockSearchEngine.search.resolves({
+                html: '<li>Updated results</li>',
+                canLoadMore: false,
+                latestQuery: 'previous query'
+            });
+
+            await myExtension.handleWebviewMessage({ 
+                command: 'updateNumberOfContextLines', 
+                value: 5 
+            }, mockPanel);
+
+            assert.ok(mockSearchEngine.updateContextLines.calledWith(5));
+            assert.ok(mockSearchEngine.search.calledWith('previous query', '/test/workspace'));
+        });
+
+        test('should handle search errors gracefully', async () => {
+            const showErrorStub = sandbox.stub(vscode.window, 'showErrorMessage');
+            mockSearchEngine.search.rejects(new Error('Search failed'));
+
+            await myExtension.handleWebviewMessage({ 
+                command: 'search', 
+                text: 'failing query' 
+            }, mockPanel);
+
+            assert.ok(showErrorStub.calledWith('Error: Search failed'));
+            assert.ok(postMessageStub.calledWith({
+                command: 'showResults',
+                text: 'Search failed'
+            }));
+        });
+    });
+
+    suite('Webview Creation', () => {
+        test('should create webview panel correctly', () => {
+            const createPanelStub = sandbox.stub(vscode.window, 'createWebviewPanel');
+            const mockCreatedPanel = {
+                webview: {
+                    html: '',
+                    onDidReceiveMessage: sandbox.stub()
+                }
+            };
+            createPanelStub.returns(mockCreatedPanel);
+
+            myExtension.showPanel({ subscriptions: [] });
+
+            assert.ok(createPanelStub.calledWith(
+                'gitSearch',
+                'Git Search',
+                vscode.ViewColumn.One,
+                { enableScripts: true }
+            ));
+        });
+
+        test('should set webview content', () => {
+            const content = myExtension.getWebviewContent();
+            assert.ok(typeof content === 'string');
+            assert.ok(content.length > 0);
+        });
+    });
+
+    suite('Workspace Handling', () => {
+        test('should handle no workspace gracefully', async () => {
+            sandbox.restore();
+            sandbox = sinon.createSandbox();
+            sandbox.stub(vscode.workspace, 'workspaceFolders').value([]);
+
+            mockSearchEngine.search.resolves({
+                html: 'No workspace found',
+                canLoadMore: false
+            });
+
+            // Re-setup mocks after sandbox restore
+            postMessageStub = sandbox.stub();
+            mockPanel.webview.postMessage = postMessageStub;
+
+            await myExtension.handleWebviewMessage({ 
+                command: 'search', 
+                text: 'test' 
+            }, mockPanel);
+
+            assert.ok(mockSearchEngine.search.calledWith('test', null));
+        });
+    });
+}); 

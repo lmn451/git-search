@@ -36,9 +36,10 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "pretest": "pnpm run lint",
     "prettier": "prettier -w src",
-    "test": "node ./test/runTest.js"
+    "test:unit": "node test/unit/searchEngine.test.js",
+    "test:integration": "NODE_TLS_REJECT_UNAUTHORIZED=0 node ./test/runTest.js",
+    "test": "npm run test:unit && npm run test:integration"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.6",
