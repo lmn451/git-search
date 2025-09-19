@@ -4,7 +4,7 @@ const path = require("path");
 
 require("./setup");
 
-function prepareWithStubbedHelpers(execImpl) {
+function prepareWithStubbedHelpers(_execImpl) {
   const helpersPath = path.join(__dirname, "..", "..", "src", "helpers.js");
   const gitCommandsPath = path.join(__dirname, "..", "..", "src", "gitCommands.js");
 

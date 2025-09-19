@@ -16,7 +16,7 @@ describe("htmlHelpers.escapeHtml", () => {
 describe("htmlHelpers.highlightQueryInHtml", () => {
   it("wraps case-insensitive matches with span.searched-query", () => {
     const out = html.highlightQueryInHtml("Hello hello", "hello");
-    const count = (out.match(/<span class=\"searched-query\">/g) || []).length;
+    const count = (out.match(/<span class="searched-query">/g) || []).length;
     assert.equal(count, 2);
   });
 

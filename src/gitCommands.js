@@ -18,8 +18,8 @@ async function getRepoUrl(workspaceFolderPath) {
       .replace(/^git@github\.com:/, "https://github.com/")
       .replace(/^git@gitlab\.com:/, "https://gitlab.com/")
       .replace(/^git@bitbucket\.org:/, "https://bitbucket.org/")
-      .replace(/^ssh:\/\/git@/, "https://")
-      .replace(/:(?=[^\/]+)/, "/"); // Replace colon before username/project with a slash
+      .replace(new RegExp("^ssh://git@"), "https://")
+      .replace(/:(?=[^/]+)/, "/"); // Replace colon before username/project with a slash
   } catch (e) {
     console.log(e.stack);
     return e;

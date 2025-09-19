@@ -47,13 +47,15 @@
     "test:all": "pnpm run test:unit && pnpm run test:ext"
   },
   "devDependencies": {
+    "@eslint/js": "^9.35.0",
     "@types/mocha": "^10.0.6",
     "@types/node": "~18.19.14",
     "@types/vscode": "^1.86.0",
     "@vscode/test-electron": "^2.3.9",
     "c8": "^10.1.3",
-    "eslint": "^8.56.0",
+    "eslint": "^9.35.0",
     "glob": "^10.3.10",
+    "globals": "^16.4.0",
     "mocha": "^10.2.0",
     "sinon": "^17.0.1",
     "typescript": "^5.3.3"

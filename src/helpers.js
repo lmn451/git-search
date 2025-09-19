@@ -46,7 +46,7 @@ module.exports = {
       const date = new Date(dateStr);
       date.setSeconds(date.getSeconds() - 1);
       return date.toISOString();
-    } catch (err) {
+    } catch {
       return null;
     }
   },

@@ -31,7 +31,7 @@ let redraw = false;
 const getWorkspace = () => {
   try {
     return vscode.workspace.workspaceFolders[0].uri.fsPath;
-  } catch (err) {
+  } catch {
     return null;
   }
 };
