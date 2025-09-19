@@ -56,13 +56,13 @@ describe("Git Search Extension Tests", () => {
     assert.ok(mockPanel.webview.postMessage.called);
   });
 
-  xit("should execute command and return result", async () => {
+  it("should execute command and return result", async () => {
     child_process.exec.callsArgWith(2, null, "output", "");
     const result = await executeCommand("git status", ".");
     assert.equal(result, "output");
   });
 
-  xit("should get repository URL", async () => {
+  it("should get repository URL", async () => {
     child_process.exec.callsArgWith(
       2,
       null,

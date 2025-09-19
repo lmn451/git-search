@@ -1,4 +1,4 @@
-const { exec } = require("child_process");
+const cp = require("child_process");
 
 class Queue {
   constructor(maxLength) {
@@ -85,7 +85,7 @@ module.exports = {
 
   executeCommand: function executeCommand(command, cwd) {
     return new Promise((resolve, reject) => {
-      exec(
+      cp.exec(
         command,
         { cwd, maxBuffer: 1024 * 1024 * 10 },
         (error, stdout, stderr) => {

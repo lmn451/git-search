@@ -225,4 +225,5 @@ module.exports = {
   handleWebviewMessage,
   getWebviewContent,
   executeGitSearch,
+  getRepoUrl,
 };

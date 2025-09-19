@@ -25,6 +25,28 @@ Regularly, there's a need to understand how a specific variable or function was 
 Launch the command palette and search for 'Show Git Search Panel'.
 Enter your query, hit enter, and watch as Git Search works its magic.Browse through the results, click on commit links for the full story, or keep the investigation going with 'Load More'.
 
+🧪 **Testing**
+
+Prerequisites
+- Node 20 (nvm use 20; .nvmrc is provided)
+- pnpm (via Corepack)
+
+Install
+- pnpm i
+
+Unit tests
+- pnpm run test:unit
+
+Coverage
+- pnpm run coverage
+- open coverage/index.html
+
+Extension tests
+- pnpm run test:ext
+
+All tests
+- pnpm run test:all
+
 🤝 **Join the Mission**:
 
 Got some cool ideas or valuable feedback? Team up with us on [GitHub](https://github.com/lmn451/git-search) and help make Git Search even more awesome. Let’s code, collaborate, and create something phenomenal!
