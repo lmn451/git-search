@@ -27,6 +27,7 @@ let isLoadMore = false;
 let lastCommitDate = "";
 let currentCommits = [];
 let redraw = false;
+let perCommitContextLines = new Map();
 
 const getWorkspace = () => {
   try {
@@ -77,6 +78,15 @@ function handleWebviewMessage(message, panel) {
     case "updateNumberOfContextLines":
       handleUpdateNumberOfContextLines(message, panel);
       break;
+    case "copyCommitHash":
+      vscode.env.clipboard
+        .writeText(message.value)
+        .then(() => vscode.window.setStatusBarMessage("Copied commit hash", 1200))
+        .catch((err) => vscode.window.showErrorMessage(err?.message || String(err)));
+      break;
+    case "changeContextLines":
+      handleChangeContextLines(message, panel);
+      break;
   }
 }
 
@@ -88,9 +98,44 @@ async function handleUpdateNumberOfContextLines(message, panel) {
   await executeGitSearch(latestQuery, panel);
 }
 
+async function handleChangeContextLines(message, panel) {
+  try {
+    const commitHash = message.commit;
+    const requested = Number(message.value);
+    const newValue = Math.max(1, Math.min(50, Number.isFinite(requested) ? requested : NUMBER_OF_CONTEXT_LINES));
+    perCommitContextLines.set(commitHash, newValue);
+
+    const workspaceFolderPath = getWorkspace();
+    if (!workspaceFolderPath) return;
+
+    const diffOutput = await getDiff(
+      workspaceFolderPath,
+      commitHash,
+      latestQuery,
+      newValue
+    );
+
+    const highlightedDiff = highlightQueryInHtml(
+      escapeHtml(diffOutput),
+      escapeHtml(latestQuery)
+    );
+    const diffHtml = convert.toHtml(highlightedDiff);
+
+    panel.webview.postMessage({
+      command: "updateCommitDiff",
+      commit: commitHash,
+      value: newValue,
+      diffHtml,
+    });
+  } catch (error) {
+    vscode.window.showErrorMessage(error.stack || String(error));
+  }
+}
+
 async function handleSearchCommand(query, panel) {
   if (query !== latestQuery) {
     currentCommits = [];
+    perCommitContextLines.clear();
   }
   latestQuery = query;
   isLoadMore = false;
@@ -110,6 +155,7 @@ function handleResetCommand(panel) {
   isLoadMore = false;
   lastCommitDate = "";
   currentCommits = [];
+  perCommitContextLines.clear();
   panel.webview.postMessage({ command: "reset", text: "" });
 }
 
@@ -167,13 +213,14 @@ async function executeGitSearch(rawQuery, panel) {
 
     const diffPromises = currentCommits.map((commitEntry) => {
       const [commitHash, author, commitDate] = commitEntry.split("|");
+      const lines = perCommitContextLines.get(commitHash) ?? NUMBER_OF_CONTEXT_LINES;
       return getDiff(
         workspaceFolderPath,
         commitHash,
         query,
-        NUMBER_OF_CONTEXT_LINES
+        lines
       )
-        .then((diffOutput) => ({ commitHash, diffOutput, commitDate, author }))
+        .then((diffOutput) => ({ commitHash, diffOutput, commitDate, author, lines }))
         .catch((error) => {
           vscode.window.showErrorMessage(error.stack);
           return null; // Continue processing other commits
@@ -183,15 +230,29 @@ async function executeGitSearch(rawQuery, panel) {
     const diffResults = await Promise.all(diffPromises);
     const contentArray = diffResults.map((diff) => {
       if (!diff) return "";
-      const { commitHash, diffOutput, commitDate, author } = diff;
+      const { commitHash, diffOutput, commitDate, author, lines } = diff;
       const highlightedDiff = highlightQueryInHtml(
         escapeHtml(diffOutput),
         escapeHtml(query)
       );
       const diffHtml = convert.toHtml(highlightedDiff);
-      return `<li class="commit-diff">Commit: <a href=${repoUrl}/commit/${commitHash}>${commitHash}</a> by ${author} at ${formatDate(
-        commitDate
-      )}<br><pre>${diffHtml}</pre></li>`;
+      const shortHash = commitHash.slice(0, 7);
+      const commitUrl = `${repoUrl}/commit/${commitHash}`;
+      return `<li class="commit-diff" data-commit="${commitHash}">
+        <div class="commit-header">
+          <span class="commit-title">Commit: <a class="commit-link" href="${commitUrl}">${shortHash}</a></span>
+          <span class="commit-meta">by ${escapeHtml(author)} at ${formatDate(commitDate)}</span>
+          <span class="commit-actions">
+            <span class="context-lines" title="Number of context lines">
+              <button class="btn-ghost dec-lines" data-commit="${commitHash}" aria-label="Decrease context lines">-</button>
+              <span class="lines-count" data-commit="${commitHash}">${lines}</span>
+              <button class="btn-ghost inc-lines" data-commit="${commitHash}" aria-label="Increase context lines">+</button>
+            </span>
+            <button class=\"btn-ghost btn-icon copy-hash\" data-commit=\"${commitHash}\" title=\"Copy commit hash\" aria-label=\"Copy commit hash\">\n              <svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M16 1H8v2h8v12h2V3a2 2 0 00-2-2zM14 5H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2zm0 14H6V7h8v12z\"/></svg>\n            </button>\n            <button class=\"btn-ghost btn-icon toggle-diff\" aria-expanded=\"true\" title=\"Collapse/Expand diff\" aria-label=\"Collapse diff\">\n              <svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M7 10l5 5 5-5H7z\"/></svg>\n            </button>\n
+          </span>
+        </div>
+        <pre class="diff-body">${diffHtml}</pre>
+      </li>`;
     });
 
     let content = contentArray.join("");
